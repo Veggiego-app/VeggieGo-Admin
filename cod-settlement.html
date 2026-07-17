@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+/>
+
+<title>
+VeggieGo COD Settlement
+</title>
+
+<link
+rel="stylesheet"
+href="style.css"
+/>
+
+<link
+rel="stylesheet"
+href="cod-settlement.css"
+/>
+
+</head>
+
+<body>
+
+<script type="module">
+
+import { auth }
+from "./firebase.js"
+
+import {
+onAuthStateChanged
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+onAuthStateChanged(
+
+auth,
+
+async (user) => {
+
+if (!user) {
+
+window.location.href =
+"login.html"
+
+return
+
+}
+
+const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+if (
+
+!adminEmails.includes(
+user.email
+)
+
+) {
+
+await auth.signOut()
+
+alert(
+"Access Denied"
+)
+
+window.location.href =
+"login.html"
+
+return
+
+}
+
+}
+
+)
+
+</script>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+<div class="sidebar-logo">
+🍃 VeggieGo
+</div>
+
+<div class="menu">
+
+<a
+href="index.html"
+class="menu-item"
+>
+📊 Dashboard
+</a>
+
+<a
+href="restaurants.html"
+class="menu-item"
+>
+🍽 Restaurants
+</a>
+
+<a
+href="riders.html"
+class="menu-item"
+>
+🚚 Riders
+</a>
+
+<a
+href="customers.html"
+class="menu-item"
+>
+👤 Customers
+</a>
+
+<a
+href="analytics.html"
+class="menu-item"
+>
+📊 Analytics
+</a>
+
+<a
+href="cod-settlement.html"
+class="menu-item active"
+>
+💵 COD Settlement
+</a>
+
+<a
+href="settings.html"
+class="menu-item"
+>
+⚙ Settings
+</a>
+
+</div>
+
+<div class="admin-profile">
+
+<div class="admin-name">
+VeggieGo Admin
+</div>
+
+<div class="admin-role">
+🟢 Super Admin
+</div>
+
+<button
+class="logout-btn"
+id="logoutBtn"
+>
+⎋ Logout
+</button>
+
+</div>
+
+</div>
+
+<!-- MAIN -->
+
+<div class="main">
+
+<div class="topbar">
+
+<div class="title">
+💵 COD Settlement
+</div>
+
+<div class="live-box">
+🟢 LIVE
+</div>
+
+</div>
+
+<div class="settlement-container">
+
+<div class="stats-grid">
+
+<div class="stat-card">
+
+<div
+class="stat-value"
+id="totalCollected"
+>
+₹0
+</div>
+
+<div
+class="stat-label"
+>
+Total Cash Collected
+</div>
+
+</div>
+
+<div class="stat-card">
+
+<div
+class="stat-value"
+id="totalDeposited"
+>
+₹0
+</div>
+
+<div
+class="stat-label"
+>
+Total Deposited
+</div>
+
+</div>
+
+<div class="stat-card">
+
+<div
+class="stat-value"
+id="cashWithRiders"
+>
+₹0
+</div>
+
+<div
+class="stat-label"
+>
+Cash With Riders
+</div>
+
+</div>
+
+<div class="stat-card">
+
+<div
+class="stat-value"
+id="ridersWithBalance"
+>
+0
+</div>
+
+<div
+class="stat-label"
+>
+Riders With Balance
+</div>
+
+</div>
+
+</div>
+
+<br>
+<br>
+
+<button
+id="addSettlementBtn"
+class="approve-btn"
+>
+
+💵 Add Settlement
+
+</button>
+
+<br>
+<br>
+
+<div class="table-container">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Rider Name</th>
+
+<th>Mobile</th>
+
+<th>Collected</th>
+
+<th>Deposited</th>
+
+<th>Balance</th>
+
+<th>Last Settlement</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody
+id="riderTable"
+>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script
+type="module"
+src="cod-settlement.js">
+</script>
+
+</body>
+
+</html>

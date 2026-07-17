@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8" />
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    />
+
+    <title>
+        VeggieGo Orders
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    />
+<link
+rel="stylesheet"
+href="orders.css"
+/>
+</head>
+
+<body>
+    <script type="module">
+
+import {
+auth
+}
+from "./firebase.js"
+
+import {
+onAuthStateChanged
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+onAuthStateChanged(
+auth,
+async (user) => {
+
+    if (!user) {
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+    const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+    if (
+
+        !adminEmails.includes(
+            user.email
+        )
+
+    ) {
+
+        await auth.signOut()
+
+        alert(
+            "Access Denied"
+        )
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+})
+
+</script>
+
+    <!-- SIDEBAR -->
+
+    <div class="sidebar">
+
+        <div class="logo">
+            🍃 VeggieGo
+        </div>
+
+        <a href="index.html">
+            Dashboard
+        </a>
+
+        <a
+            href="orders.html"
+            class="active"
+        >
+            Orders
+        </a>
+
+        <a href="restaurants.html">
+            Restaurants
+        </a>
+
+        <a href="riders.html">
+            Riders
+        </a>
+
+        <a href="customers.html">
+    Customers
+</a>
+
+        <a href="analytics.html">
+            Analytics
+        </a>
+
+    </div>
+
+    <!-- MAIN -->
+
+    <div class="main">
+
+        <!-- TOP BAR -->
+
+        <div class="topbar">
+
+            <h1>
+                Orders
+            </h1>
+
+        </div>
+
+        <!-- FILTERS -->
+
+        <div class="filters">
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search Order ID / Customer"
+            />
+
+            <select id="statusFilter">
+
+                <option value="">
+                    All Status
+                </option>
+
+                <option value="PENDING">
+                    Pending
+                </option>
+
+                <option value="APPROVED">
+                    Approved
+                </option>
+
+                <option value="PREPARING">
+                    Preparing
+                </option>
+
+                <option value="READY">
+                    Ready
+                </option>
+
+                <option value="OUT_FOR_DELIVERY">
+                    Out For Delivery
+                </option>
+
+                <option value="DELIVERED">
+                    Delivered
+                </option>
+
+                <option value="CANCELLED">
+                    Cancelled
+                </option>
+
+            </select>
+
+            <select id="paymentFilter">
+
+                <option value="">
+                    All Payments
+                </option>
+
+                <option value="COD">
+                    COD
+                </option>
+
+                <option value="ONLINE">
+                    Online
+                </option>
+
+            </select>
+
+        </div>
+
+        <!-- TABLE -->
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+<th>
+ORDER ID
+</th>
+
+<th>
+ORDER TIME
+</th>
+
+<th>
+CUSTOMER
+</th>
+
+<th>
+PHONE
+</th>
+
+<th>
+CUSTOMER ID
+</th>
+
+<th>
+PREVIOUS
+</th>
+
+<th>
+AMOUNT
+</th>
+
+<th>
+ITEMS
+</th>
+
+<th>
+STATUS
+</th>
+
+<th>
+ZONE
+</th>
+
+<th>
+STORE
+</th>
+
+<th>
+STORE ID
+</th>
+
+<th>
+PAYMENT
+</th>
+
+<th>
+UPDATED
+</th>
+
+<th>
+UPDATED BY
+</th>
+
+<th>
+ACTION
+</th>
+
+</tr>
+
+                </thead>
+
+                <tbody id="ordersTableBody">
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <script type="module" src="orders.js"></script>
+
+</body>
+
+</html>

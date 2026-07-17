@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "veggie-go-98215"
+  },
+  "targets": {
+    "veggie-go-98215": {
+      "hosting": {
+        "admin": [
+          "admin-veggiego"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

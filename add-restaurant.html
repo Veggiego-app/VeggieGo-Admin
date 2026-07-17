@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+Add Restaurant
+</title>
+
+<link
+rel="stylesheet"
+href="style.css"
+>
+
+<link
+rel="stylesheet"
+href="restaurant.css"
+>
+
+</head>
+
+<body>
+<div class="main">
+
+<h1>
+🍃 Add Restaurant
+</h1>
+<div class="add-restaurant-grid">
+
+<div class="details-card basic-card">
+
+<h2>
+Basic Information
+</h2>
+
+<input
+id="restaurantName"
+placeholder="Restaurant Name"
+>
+
+<input
+id="ownerName"
+placeholder="Owner Name"
+>
+
+<input
+id="ownerPhone"
+placeholder="Owner Phone"
+>
+
+<input
+id="restaurantPhone"
+placeholder="Restaurant Phone"
+>
+
+<input
+id="email"
+placeholder="Email"
+>
+
+</div>
+
+<div class="details-card image-card">
+<h2>
+📸 Restaurant Images
+</h2>
+
+<label>
+Restaurant Logo
+</label>
+
+<input
+type="file"
+id="restaurantLogo"
+accept="image/*"
+>
+<img
+id="logoPreview"
+style="
+display:none;
+width:120px;
+height:120px;
+object-fit:cover;
+border-radius:16px;
+margin-top:15px;
+border:1px solid #374151;
+"
+/>
+
+<label>
+Restaurant Banner
+</label>
+
+<input
+type="file"
+id="restaurantBanner"
+accept="image/*"
+>
+<img
+id="bannerPreview"
+style="
+display:none;
+width:100%;
+height:180px;
+object-fit:cover;
+border-radius:16px;
+margin-top:15px;
+border:1px solid #374151;
+"
+/>
+<div
+class="restaurant-preview"
+>
+
+<img
+id="liveLogo"
+class="live-logo"
+>
+
+<h3
+id="liveName"
+>
+Restaurant Name
+</h3>
+
+<p
+id="liveCity"
+>
+City
+</p>
+
+</div>
+
+</div>
+
+<div class="details-card">
+
+<h2>
+📍 Location
+</h2>
+
+<input
+id="addressLine1"
+placeholder="Address Line 1"
+>
+
+<input
+id="addressLine2"
+placeholder="Address Line 2"
+>
+
+<input
+id="area"
+placeholder="Area"
+>
+
+<input
+id="city"
+placeholder="City"
+>
+
+<input
+id="state"
+placeholder="State"
+>
+
+<input
+id="pincode"
+placeholder="Pincode"
+>
+
+<input
+id="latitude"
+placeholder="Latitude"
+readonly
+>
+
+<input
+id="longitude"
+placeholder="Longitude"
+readonly
+>
+
+<input
+id="searchAddress"
+placeholder="Search Location"
+>
+
+<div id="map"></div>
+
+</div>
+
+<div class="details-card">
+
+<h2>
+💰 Business Settings
+</h2>
+
+<input
+type="number"
+id="commissionPercent"
+placeholder="Commission %"
+value="30"
+>
+
+<input
+type="number"
+id="packagingFee"
+placeholder="Packaging Fee"
+value="0"
+>
+
+<input
+type="number"
+id="minimumOrder"
+placeholder="Minimum Order"
+value="100"
+>
+
+<input
+type="number"
+id="maxDeliveryDistance"
+placeholder="Max Delivery Distance (KM)"
+value="15"
+>
+
+<select id="zone">
+
+<option>
+Gandhidham
+</option>
+
+<option>
+Adipur
+</option>
+
+<option>
+Anjar
+</option>
+
+<option>
+Bhuj
+</option>
+
+</select>
+
+</div>
+
+<div class="details-card">
+
+<h2>
+🧾 GST / FSSAI
+</h2>
+
+<input
+id="gstNumber"
+placeholder="GST Number"
+>
+
+<input
+id="fssaiNumber"
+placeholder="FSSAI Number"
+>
+
+<label>
+GST Certificate
+</label>
+
+<input
+type="file"
+id="gstDocument"
+>
+<img
+id="gstPreview"
+style="
+display:none;
+width:100%;
+max-height:250px;
+object-fit:contain;
+margin-top:15px;
+border-radius:12px;
+border:1px solid #374151;
+"
+/>
+
+<label>
+FSSAI Certificate
+</label>
+
+<input
+type="file"
+id="fssaiDocument"
+>
+<img
+id="fssaiPreview"
+style="
+display:none;
+width:100%;
+max-height:250px;
+object-fit:contain;
+margin-top:15px;
+border-radius:12px;
+border:1px solid #374151;
+"
+/>
+
+</div>
+
+<div class="details-card">
+
+<h2>
+🏦 Bank Details
+</h2>
+
+<input
+id="bankName"
+placeholder="Bank Name"
+>
+
+<input
+id="accountHolder"
+placeholder="Account Holder"
+>
+
+<input
+id="accountNumber"
+placeholder="Account Number"
+>
+
+<input
+id="ifscCode"
+placeholder="IFSC Code"
+>
+
+<input
+id="upiId"
+placeholder="UPI ID"
+>
+
+</div>
+
+<div class="details-card">
+
+<h2>
+🔐 Login Details
+</h2>
+
+<input
+id="loginEmail"
+placeholder="Login Email"
+>
+
+<input
+type="password"
+id="loginPassword"
+placeholder="Password"
+>
+
+</div>
+
+<div class="details-card">
+
+<h2>
+🕒 Restaurant Timing
+</h2>
+
+<div id="timingSlotsContainer">
+
+<div class="weekly-slot-row">
+
+<div class="time-box">
+
+<label>
+START
+</label>
+
+<input
+type="time"
+class="slot-start"
+>
+
+</div>
+
+<div class="slot-arrow">
+→
+</div>
+
+<div class="time-box">
+
+<label>
+END
+</label>
+
+<input
+type="time"
+class="slot-end"
+>
+
+</div>
+
+<button
+type="button"
+class="delete-slot-btn"
+>
+DELETE
+</button>
+
+</div>
+
+</div>
+
+<button
+type="button"
+id="addSlotBtn"
+class="add-slot-btn"
+>
+
++ Add Time Slot
+
+</button>
+
+</div>
+
+<div class="add-restaurant-actions">
+
+<button
+id="createRestaurantBtn"
+class="approve-btn-table"
+style="
+width:100%;
+padding:15px;
+font-size:18px;
+"
+>
+
+🚀 CREATE RESTAURANT
+
+</button>
+
+</div>
+
+</div>
+
+<script
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGxua4ApZbRdYP1wA6e8b4AwvqdKxrZVc&libraries=places"
+></script>
+
+<div
+id="loadingOverlay"
+class="loading-overlay"
+>
+
+<div class="spinner"></div>
+
+<div>
+Creating Restaurant...
+</div>
+
+</div>
+<div
+id="successModal"
+class="success-modal"
+>
+
+<div
+class="success-content"
+>
+
+<h2>
+✅ Restaurant Created
+</h2>
+
+<p>
+Restaurant added successfully
+</p>
+
+<button
+onclick="
+window.location.href=
+'restaurants.html'
+"
+>
+
+Go To Restaurants
+
+</button>
+
+</div>
+
+</div>
+
+<script
+type="module"
+src="add-restaurant.js"
+></script>
+</body>
+</html>

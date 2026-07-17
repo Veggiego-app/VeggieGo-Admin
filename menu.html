@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8" />
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+/>
+
+<title>
+Menu Management
+</title>
+
+<link
+rel="stylesheet"
+href="style.css"
+/>
+
+<link
+rel="stylesheet"
+href="menu.css"
+/>
+
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+    <div class="sidebar-logo">
+        🍃 VeggieGo
+    </div>
+
+    <div class="menu">
+
+        <a href="index.html" class="menu-item">
+            📊 Dashboard
+        </a>
+
+        <a href="restaurants.html" class="menu-item active">
+            🍽 Restaurants
+        </a>
+
+        <a href="riders.html" class="menu-item">
+            🛵 Riders
+        </a>
+
+        <a href="customers.html" class="menu-item">
+            👤 Customers
+        </a>
+
+        <a href="analytics.html" class="menu-item">
+            📊 Analytics
+        </a>
+
+        <a href="cod-settlement.html" class="menu-item">
+            💵 COD Settlement
+        </a>
+
+        <a href="settings.html" class="menu-item">
+            ⚙ Settings
+        </a>
+
+    </div>
+
+    <div class="admin-profile">
+
+        <div class="admin-name">
+            VeggieGo Admin
+        </div>
+
+        <div class="admin-role">
+            🟢 Super Admin
+        </div>
+
+        <button
+            class="logout-btn"
+            id="logoutBtn">
+
+            ⎋ Logout
+
+        </button>
+
+    </div>
+
+</div>
+
+<div class="main">
+
+<h1>
+🍃 Menu Management
+</h1>
+
+<div id="restaurantInfo" class="restaurant-info">
+
+    <h2 id="restaurantName">Restaurant Name</h2>
+
+    <p id="restaurantOwner">
+        Owner : --
+    </p>
+
+</div>
+
+<!-- TOP DASHBOARD -->
+
+<div class="menu-dashboard">
+
+<div class="dash-card">
+<h2 id="totalItems">
+0
+</h2>
+<p>
+Total Items
+</p>
+</div>
+
+<div class="dash-card">
+<h2 id="totalCategories">
+0
+</h2>
+<p>
+Categories
+</p>
+</div>
+
+<div class="dash-card">
+<h2 id="availableItems">
+0
+</h2>
+<p>
+Available
+</p>
+</div>
+
+<div class="dash-card">
+<h2 id="hiddenItems">
+0
+</h2>
+<p>
+Hidden
+</p>
+</div>
+
+</div>
+
+<!-- MAIN LAYOUT -->
+
+<div class="menu-layout">
+
+<!-- LEFT -->
+
+<div class="category-panel">
+
+<div class="panel-top">
+
+<h2>
+Categories
+</h2>
+<div
+style="
+display:flex;
+flex-direction:column;
+gap:12px;
+margin-top:15px;
+"
+>
+
+</div>
+
+<button id="addCategoryBtn">
++ Add
+</button>
+
+</div>
+
+<div id="categoriesContainer">
+
+</div>
+
+</div>
+
+<!-- CENTER -->
+
+<div class="subcategory-panel">
+
+<div class="panel-top">
+
+<h2>
+Sub Categories
+</h2>
+
+<button id="addSubCategoryBtn">
++ Add
+</button>
+
+</div>
+
+<div id="subCategoriesContainer">
+
+</div>
+
+</div>
+
+<!-- RIGHT -->
+
+<div class="items-panel">
+
+<div class="panel-top">
+
+<h2>
+Menu Items
+</h2>
+
+<button id="addItemBtn">
++ Add Item
+</button>
+<input
+type="file"
+id="excelFile"
+accept=".xlsx,.xls"
+hidden
+>
+
+<button
+id="uploadExcelBtn"
+style="
+background:#22c55e;
+color:white;
+border:none;
+padding:12px 20px;
+border-radius:10px;
+cursor:pointer;
+margin-left:10px;
+"
+>
+📊 Upload Excel
+</button>
+
+</div>
+
+<input
+type="text"
+id="searchInput"
+placeholder="Search item..."
+/>
+
+<div id="itemsContainer">
+
+</div>
+<!-- EDIT ITEM MODAL -->
+
+<div
+class="modal"
+id="editItemModal"
+>
+
+<div class="modal-content">
+
+<h2>
+Edit Item 😎
+</h2>
+
+<input
+type="text"
+id="editItemName"
+placeholder="Item Name"
+/>
+<br><br>
+
+<textarea
+
+id="editItemDescription"
+
+placeholder="Item Description"
+
+class="custom-textarea"
+
+></textarea>
+
+<br><br>
+
+<input
+type="number"
+id="editItemPrice"
+placeholder="Base Price"
+/>
+
+<br><br>
+
+<select id="editItemType">
+
+<option value="veg">
+
+🟩 Pure Veg
+
+</option>
+
+</select>
+
+<input
+type="file"
+id="editItemImage"
+accept="image/*"
+/>
+
+<br><br>
+
+<img
+id="editPreviewImage"
+style="
+width:100%;
+height:220px;
+object-fit:cover;
+border-radius:16px;
+display:none;
+margin-top:10px;
+"
+/>
+
+<br><br>
+
+<label class="switch-row">
+
+<span>
+Available
+</span>
+
+<input
+type="checkbox"
+id="editAvailable"
+checked
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Show Item
+</span>
+
+<input
+type="checkbox"
+id="editVisible"
+checked
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Bestseller
+</span>
+
+<input
+type="checkbox"
+id="editBestseller"
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Recommended
+</span>
+
+<input
+type="checkbox"
+id="editRecommended"
+/>
+
+</label>
+
+<br>
+
+<div id="editItemTimeSlotsContainer">
+
+</div>
+
+<button
+    type="button"
+    class="add-slot-btn"
+    onclick="addEditItemSlot()"
+>
+
+    + Add Time Slot
+
+</button>
+
+<br><br>
+
+<div id="editVariantsContainer">
+
+</div>
+
+<button
+id="editAddVariantBtn"
+class="approve-btn"
+>
+
++ Add Variant
+
+</button>
+
+<br><br>
+
+<div class="modal-buttons">
+
+<button
+id="updateItemBtn"
+class="approve-btn"
+>
+
+UPDATE
+
+</button>
+
+<button
+id="closeEditItemBtn"
+class="reject-btn"
+>
+
+CANCEL
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+<!-- CATEGORY MODAL -->
+
+<div
+class="modal"
+id="categoryModal"
+>
+
+<div class="modal-content">
+
+<h2>
+Add Category 😎
+</h2>
+
+<input
+type="text"
+id="categoryName"
+placeholder="Category Name"
+/>
+
+<br><br>
+
+<div class="modal-buttons">
+
+<button
+id="saveCategoryBtn"
+class="approve-btn"
+>
+SAVE
+</button>
+
+<button
+id="closeCategoryBtn"
+class="reject-btn"
+>
+CANCEL
+</button>
+
+</div>
+
+</div>
+
+</div>
+<!-- SUB CATEGORY MODAL -->
+
+<div
+class="modal"
+id="subCategoryModal"
+>
+
+<div class="modal-content">
+
+<h2>
+Add Sub Category 😎
+</h2>
+
+<input
+type="text"
+id="subCategoryName"
+placeholder="Sub Category Name"
+/>
+
+<br><br>
+
+<div class="modal-buttons">
+
+<button
+id="saveSubCategoryBtn"
+class="approve-btn"
+>
+SAVE
+</button>
+
+<button
+id="closeSubCategoryBtn"
+class="reject-btn"
+>
+CANCEL
+</button>
+
+</div>
+
+</div>
+
+</div>
+<!-- SUB CATEGORY TIMING MODAL -->
+
+<div
+class="modal"
+id="subCategoryTimingModal"
+>
+
+<div class="modal-content">
+
+<h2>
+✏️ Edit Sub Category
+</h2>
+
+<br><br>
+
+<input
+type="text"
+id="editSubCategoryName"
+placeholder="SubCategory Name"
+/>
+
+<br><br>
+
+<div id="subCategoryTimeSlotsContainer">
+
+    <div class="time-slot-row">
+
+        <input
+            type="time"
+            class="subcategory-slot-start"
+        >
+
+        <input
+            type="time"
+            class="subcategory-slot-end"
+        >
+
+        <button
+            class="delete-slot-btn"
+            onclick="removeSubCategorySlot(this)"
+        >
+            ✕
+        </button>
+
+    </div>
+
+</div>
+
+<button
+    type="button"
+    class="add-slot-btn"
+    onclick="addSubCategorySlot()"
+>
+
+    + Add Time Slot
+
+</button>
+
+<br><br>
+
+<label class="switch-row">
+
+<span>
+Auto Hide
+</span>
+
+<input
+type="checkbox"
+id="subCategoryAutoHide"
+checked
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Available
+</span>
+
+<input
+type="checkbox"
+id="subCategoryAvailable"
+checked
+/>
+
+</label>
+
+<div class="modal-buttons">
+
+<button
+id="saveSubCategoryTimingBtn"
+class="approve-btn"
+>
+
+SAVE
+
+</button>
+
+<button
+id="closeSubCategoryTimingBtn"
+class="reject-btn"
+>
+
+CANCEL
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+<!-- ITEM MODAL -->
+
+<div
+class="modal"
+id="itemModal"
+>
+
+<div class="modal-content">
+
+<h2>
+Add Item 😎
+</h2>
+
+<input
+type="text"
+id="itemName"
+placeholder="Item Name"
+/>
+
+<br><br>
+
+<textarea
+
+id="itemDescription"
+
+placeholder="Item Description"
+
+class="custom-textarea"
+
+></textarea>
+
+<br><br>
+
+<input
+type="number"
+id="itemPrice"
+placeholder="Base Price"
+/>
+
+<br><br>
+
+<select id="itemType">
+
+<option value="veg">
+
+🟩 Pure Veg
+
+</option>
+
+</select>
+<input
+type="file"
+id="itemImage"
+accept="image/*"
+/>
+
+<br><br>
+
+<img
+id="previewImage"
+style="
+width:100%;
+height:220px;
+object-fit:cover;
+border-radius:16px;
+display:none;
+margin-top:10px;
+"
+/>
+<br><br>
+
+<label class="switch-row">
+
+<span>
+Available
+</span>
+
+<input
+type="checkbox"
+id="itemAvailable"
+checked
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Show Item
+</span>
+
+<input
+type="checkbox"
+id="itemVisible"
+checked
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Bestseller
+</span>
+
+<input
+type="checkbox"
+id="itemBestseller"
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Recommended
+</span>
+
+<input
+type="checkbox"
+id="itemRecommended"
+/>
+
+</label>
+
+<br>
+
+<div id="itemTimeSlotsContainer">
+
+</div>
+
+<button
+    type="button"
+    class="add-slot-btn"
+    onclick="addItemSlot()"
+>
+
+    + Add Time Slot
+
+</button>
+
+<br><br>
+<div id="variantsContainer">
+
+</div>
+
+<button
+id="addVariantBtn"
+class="approve-btn"
+>
+
++ Add Variant
+
+</button>
+
+<br><br>
+
+<div class="modal-buttons">
+
+<button
+id="saveItemBtn"
+class="approve-btn"
+>
+
+SAVE
+
+</button>
+
+<button
+id="closeItemBtn"
+class="reject-btn"
+>
+
+CANCEL
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script
+type="module"
+src="menu.js"
+></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<!-- CATEGORY TIMING MODAL -->
+
+<div
+class="modal"
+id="categoryTimingModal"
+>
+
+<div class="modal-content">
+
+<h2>
+✏️ Edit Category
+</h2>
+
+
+<br><br>
+<input
+type="text"
+id="editCategoryName"
+placeholder="Category Name"
+/>
+
+<br><br>
+<div id="categoryTimeSlotsContainer">
+
+    <div class="time-slot-row">
+
+        <input
+            type="time"
+            class="category-slot-start"
+        >
+
+        <input
+            type="time"
+            class="category-slot-end"
+        >
+
+        <button
+            class="delete-slot-btn"
+            onclick="removeCategorySlot(this)"
+        >
+            ✕
+        </button>
+
+    </div>
+
+</div>
+
+<button
+    type="button"
+    class="add-slot-btn"
+    onclick="addCategorySlot()"
+>
+
+    + Add Time Slot
+
+</button>
+
+<br><br>
+
+<label class="switch-row">
+
+<span>
+Auto Hide
+</span>
+
+<input
+type="checkbox"
+id="categoryAutoHide"
+checked
+/>
+
+</label>
+
+<label class="switch-row">
+
+<span>
+Available
+</span>
+
+<input
+type="checkbox"
+id="categoryAvailable"
+checked
+/>
+
+</label>
+
+<div class="modal-buttons">
+
+<button
+id="saveCategoryTimingBtn"
+class="approve-btn"
+>
+
+SAVE
+
+</button>
+
+<button
+id="closeCategoryTimingBtn"
+class="reject-btn"
+>
+
+CANCEL
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,537 @@
+/* ========================= */
+/* ANALYTICS PAGE STYLES */
+/* ========================= */
+
+.analytics-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ========================= */
+/* SECTION TITLE */
+/* ========================= */
+
+.section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 16px;
+}
+
+/* ========================= */
+/* STATISTICS CARDS */
+/* ========================= */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #111827, #0b1220);
+    border: 1px solid #1f2937;
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: 0.3s;
+}
+
+.stat-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(124, 58, 237, 0.15), transparent 40%);
+    pointer-events: none;
+}
+
+.stat-card:hover {
+    border-color: #7c3aed;
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+    transform: translateY(-2px);
+}
+
+.stat-card.small {
+    padding: 16px;
+    min-height: 110px;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 8px;
+}
+
+.stat-card.small .stat-value {
+    font-size: 28px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+/* ========================= */
+/* ANALYTICS SECTION */
+/* ========================= */
+
+.analytics-section {
+    background: linear-gradient(145deg, #111827, #0b1220);
+    border: 1px solid #1f2937;
+    border-radius: 20px;
+    padding: 24px;
+}
+
+/* ========================= */
+/* CHART STYLES */
+/* ========================= */
+
+.chart-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.chart-btn {
+    background: transparent;
+    border: 1px solid #374151;
+    color: #cbd5e1;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.chart-btn:hover {
+    border-color: #7c3aed;
+    color: white;
+}
+
+.chart-btn.active {
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    border-color: #7c3aed;
+    color: white;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+}
+
+.chart-container {
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    height: 300px;
+}
+
+/* ========================= */
+/* PAYMENT ANALYTICS */
+/* ========================= */
+
+.payment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.payment-card {
+    background: linear-gradient(135deg, #0f172a, #051018);
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 20px;
+    transition: 0.3s;
+}
+
+.payment-card:hover {
+    border-color: #7c3aed;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.15);
+}
+
+.payment-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.payment-count {
+    font-size: 32px;
+    font-weight: 800;
+    color: white;
+}
+
+.payment-label {
+    font-size: 14px;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+/* ========================= */
+/* ZONE ANALYTICS */
+/* ========================= */
+
+.zone-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.zone-card {
+    background: linear-gradient(135deg, #0f172a, #051018);
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.zone-card:hover {
+    border-color: #7c3aed;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.15);
+    transform: translateY(-2px);
+}
+
+.zone-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.zone-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 8px;
+}
+
+.zone-count {
+    font-size: 14px;
+    color: #a78bfa;
+    font-weight: 600;
+}
+
+/* ========================= */
+/* TOP RESTAURANTS */
+/* ========================= */
+
+.top-restaurants-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.restaurant-tabs {
+    display: flex;
+    gap: 8px;
+}
+
+.restaurant-tab {
+    background: transparent;
+    border: 1px solid #374151;
+    color: #cbd5e1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    font-size: 14px;
+}
+
+.restaurant-tab:hover {
+    border-color: #7c3aed;
+    color: white;
+}
+
+.restaurant-tab.active {
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    border-color: #7c3aed;
+    color: white;
+}
+
+/* ========================= */
+/* TABLE STYLES */
+/* ========================= */
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-container thead {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.table-container th {
+    padding: 16px;
+    text-align: left;
+    font-size: 13px;
+    color: #cbd5e1;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.table-container td {
+    padding: 16px;
+    border-top: 1px solid #1f2937;
+    font-size: 14px;
+    color: white;
+    white-space: nowrap;
+}
+
+.table-container tbody tr:hover {
+    background: rgba(124, 58, 237, 0.08);
+}
+
+/* ========================= */
+/* COUPON ANALYTICS */
+/* ========================= */
+
+.coupon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.coupon-card {
+    background: linear-gradient(135deg, #0f172a, #051018);
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 20px;
+    transition: 0.3s;
+}
+
+.coupon-card:hover {
+    border-color: #7c3aed;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.15);
+}
+
+.coupon-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coupon-count {
+    font-size: 32px;
+    font-weight: 800;
+    color: white;
+}
+
+.coupon-code {
+    font-size: 24px;
+    font-weight: 800;
+    color: #a78bfa;
+}
+
+.coupon-label {
+    font-size: 14px;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+/* ========================= */
+/* COMMISSION ANALYTICS */
+/* ========================= */
+
+.commission-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.commission-card {
+    background: linear-gradient(135deg, #0f172a, #051018);
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 20px;
+    transition: 0.3s;
+}
+
+.commission-card:hover {
+    border-color: #7c3aed;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.15);
+}
+
+.commission-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.commission-amount {
+    font-size: 32px;
+    font-weight: 800;
+    color: #10b981;
+}
+
+.commission-label {
+    font-size: 14px;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+/* ========================= */
+/* RECENT ACTIVITY */
+/* ========================= */
+
+.activity-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.activity-tab {
+    background: transparent;
+    border: 1px solid #374151;
+    color: #cbd5e1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    font-size: 14px;
+}
+
+.activity-tab:hover {
+    border-color: #7c3aed;
+    color: white;
+}
+
+.activity-tab.active {
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    border-color: #7c3aed;
+    color: white;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 10px;
+    border: 1px solid #1f2937;
+    transition: 0.3s;
+}
+
+.activity-item:hover {
+    border-color: #7c3aed;
+    background: rgba(124, 58, 237, 0.05);
+}
+
+.activity-icon {
+    font-size: 24px;
+    min-width: 32px;
+    text-align: center;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.activity-time {
+    color: #cbd5e1;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* ========================= */
+/* MOBILE RESPONSIVE */
+/* ========================= */
+
+@media (max-width: 768px) {
+    .analytics-container {
+        gap: 16px;
+    }
+
+    .analytics-section {
+        padding: 16px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .section-title {
+        font-size: 18px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .chart-container {
+        height: 250px;
+    }
+
+    .table-container {
+        font-size: 12px;
+    }
+
+    .table-container th,
+    .table-container td {
+        padding: 12px;
+    }
+
+    .zone-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .payment-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .commission-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .zone-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .coupon-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-container {
+        height: 200px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
+
+    .payment-count {
+        font-size: 24px;
+    }
+}

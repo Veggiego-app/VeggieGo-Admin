@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8" />
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    />
+
+    <title>
+        VeggieGo Admin
+    </title>
+
+    <!-- CSS -->
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    />
+    <link
+rel="stylesheet"
+href="orders.css"
+/>
+
+    <!-- FIREBASE -->
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+</head>
+
+<body>
+    <script type="module">
+
+import {
+auth
+}
+from "./firebase.js"
+
+import {
+onAuthStateChanged
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+onAuthStateChanged(
+auth,
+async (user) => {
+
+    if (!user) {
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+    const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+    if (
+
+        !adminEmails.includes(
+            user.email
+        )
+
+    ) {
+
+        await auth.signOut()
+
+        alert(
+            "Access Denied"
+        )
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+})
+
+</script>
+
+    <!-- SIDEBAR -->
+
+    <div class="sidebar">
+
+        <div class="sidebar-logo">
+
+            🍃 VeggieGo
+
+        </div>
+
+        <div class="menu">
+
+            <!-- ORDERS -->
+
+            <a
+    href="index.html"
+    class="menu-item active"
+>
+
+    📊 Dashboard
+
+</a>
+
+            <!-- RESTAURANTS -->
+
+            <a
+                href="restaurants.html"
+                class="menu-item"
+            >
+
+                🍽 Restaurants
+
+            </a>
+
+            <!-- RIDERS -->
+
+            <a
+            
+                href="riders.html"
+                class="menu-item"
+            >
+
+                🚚 Riders
+
+            </a>
+
+            <!-- CUSTOMERS -->
+
+<a
+    href="customers.html"
+    class="menu-item"
+>
+
+    👤 Customers
+
+</a>
+
+            <!-- ANALYTICS -->
+
+            <a
+                href="analytics.html"
+                class="menu-item"
+            >
+
+                📊 Analytics
+
+            </a>
+            
+            <a href="cod-settlement.html" class="menu-item">
+            💵 COD Settlement
+            </a>
+
+
+            <!-- SETTINGS -->
+
+            <a
+                href="settings.html"
+                class="menu-item"
+            >
+
+                ⚙ Settings
+
+            </a>
+
+        </div>
+<div class="admin-profile">
+
+    <div class="admin-name">
+        VeggieGo Admin
+    </div>
+
+    <div class="admin-role">
+        🟢 Super Admin
+    </div>
+
+    <button
+class="logout-btn"
+id="logoutBtn"
+>
+
+        ⎋ Logout
+
+    </button>
+
+</div>
+    </div>
+
+    <!-- MAIN -->
+
+    <div class="main">
+
+        <!-- TOPBAR -->
+
+        <div class="topbar">
+
+            <div class="title">
+
+                Orders Overview
+
+            </div>
+
+            <div class="topbar-right">
+
+    <!-- NOTIFICATION -->
+
+    <div
+        class="notification-bell"
+        id="notificationBell"
+    >
+
+        🔔
+
+        <span
+            class="notification-count"
+            id="notificationCount"
+        >
+            0
+        </span>
+        <!-- DROPDOWN -->
+
+<div
+    class="notification-dropdown"
+    id="notificationDropdown"
+>
+
+    <div class="notification-header">
+
+        Notifications
+
+    </div>
+
+    <div
+        id="notificationList"
+        class="notification-list"
+    >
+
+        <div class="empty-notification">
+
+            No Notifications 😎
+
+        </div>
+
+    </div>
+
+</div>
+
+    </div>
+
+    <!-- LIVE -->
+
+    <div class="live-box">
+
+        🟢 LIVE
+
+    </div>
+
+</div>
+
+        </div>
+
+        <!-- DASHBOARD -->
+
+        <div class="dashboard">
+
+            <div
+                class="dash-card"
+                onclick="setFilter('PENDING')"
+            >
+                <div
+                    class="card-number"
+                    id="pendingOrders"
+                >
+                    0
+                </div>
+
+                <div class="card-title">
+                    Pending Orders
+                </div>
+            </div>
+
+            <div
+    class="dash-card"
+    onclick="setFilter('APPROVED')"
+>
+    <div
+        class="card-number"
+        id="approvedOrders"
+    >
+        0
+    </div>
+
+    <div class="card-title">
+        Approved
+    </div>
+</div>
+<div
+    class="dash-card"
+    onclick="setFilter('PREPARING')"
+>
+    <div
+        class="card-number"
+        id="preparingOrders"
+    >
+        0
+    </div>
+
+    <div class="card-title">
+        Preparing
+    </div>
+</div>
+
+            <div
+                class="dash-card"
+                onclick="setFilter('READY_FOR_PICKUP')"
+            >
+                <div
+                    class="card-number"
+                    id="readyForPickup"
+                >
+                    0
+                </div>
+
+                <div class="card-title">
+                    Ready For Pickup
+                </div>
+            </div>
+            <div
+    class="dash-card"
+    onclick="setFilter('RIDER_ASSIGNED')"
+>
+    <div
+        class="card-number"
+        id="riderAssignedOrders"
+    >
+        0
+    </div>
+
+    <div class="card-title">
+        Rider Assigned
+    </div>
+</div>
+
+            <div
+                class="dash-card"
+                onclick="setFilter('OUT_FOR_DELIVERY')"
+            >
+                <div
+                    class="card-number"
+                    id="onTheWay"
+                >
+                    0
+                </div>
+
+                <div class="card-title">
+                    On The Way
+                </div>
+            </div>
+
+            <div
+                class="dash-card"
+                onclick="setFilter('DELIVERED')"
+            >
+                <div
+                    class="card-number"
+                    id="completedOrders"
+                >
+                    0
+                </div>
+
+                <div class="card-title">
+                    Completed Orders
+                </div>
+            </div>
+
+            <div
+                class="dash-card"
+                onclick="setFilter('CANCELLED')"
+            >
+                <div
+                    class="card-number"
+                    id="cancelledOrders"
+                >
+                    0
+                </div>
+
+                <div class="card-title">
+                    Cancelled Orders
+                </div>
+            </div>
+
+            <div
+                class="dash-card"
+                onclick="setFilter('ALL')"
+            >
+                <div
+                    class="card-number"
+                    id="totalOrders"
+                >
+                    0
+                </div>
+
+                <div class="card-title">
+                    Total Orders
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FILTERS -->
+
+        <div class="filters">
+
+            <button onclick="setFilter('ALL')">
+                ALL
+            </button>
+
+            <button onclick="setFilter('PENDING')">
+                PENDING
+            </button>
+
+            <button onclick="setFilter('APPROVED')">
+                APPROVED
+            </button>
+
+            <button onclick="setFilter('PREPARING')">
+                PREPARING
+            </button>
+
+            <button onclick="setFilter('READY_FOR_PICKUP')">
+                READY FOR PICKUP
+            </button>
+
+            <button onclick="setFilter('RIDER_ASSIGNED')">
+                RIDER ASSIGNED
+            </button>
+
+            <button onclick="setFilter('OUT_FOR_DELIVERY')">
+                ON THE WAY
+            </button>
+
+            <button onclick="setFilter('DELIVERED')">
+                COMPLETED
+            </button>
+
+            <button onclick="setFilter('CANCELLED')">
+                CANCELLED
+            </button>
+
+        </div>
+
+        <!-- ORDERS -->
+
+        <div
+            id="ordersSection"
+            style="
+                display:none;
+                margin-top:30px;
+            "
+        >
+
+            <div class="table-wrapper">
+
+                <div class="table-top">
+
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search orders..."
+                    />
+
+                </div>
+
+               <div class="table-container">
+
+    <table>
+
+        <thead>
+
+           <tr>
+
+<th>
+ORDER ID
+</th>
+
+<th>
+ORDER TIME
+</th>
+
+<th>
+CUSTOMER
+</th>
+
+<th>
+PHONE
+</th>
+
+<th>
+CUSTOMER ID
+</th>
+
+<th>
+PREVIOUS
+</th>
+
+<th>
+AMOUNT
+</th>
+
+<th>
+ITEMS
+</th>
+
+<th>
+STATUS
+</th>
+
+<th>
+ZONE
+</th>
+
+<th>
+STORE
+</th>
+
+<th>
+STORE ID
+</th>
+
+<th>
+PAYMENT
+</th>
+
+<th>
+UPDATED
+</th>
+
+<th>
+UPDATED BY
+</th>
+
+<th>
+ACTION
+</th>
+
+</tr>
+
+        </thead>
+
+        <tbody id="ordersTableBody">
+
+        </tbody>
+
+    </table>
+    <div class="pagination">
+
+<button id="prevPage">
+
+⬅ PREV
+
+</button>
+<div id="ordersCount">
+
+Showing 1 - 50 of 0 Orders
+
+</div>
+
+<span id="pageNumber">
+
+1
+
+</span>
+
+<button id="nextPage">
+
+NEXT ➡
+
+</button>
+
+</div>
+
+</div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- SOUND -->
+
+    <audio
+    id="alertSound"
+    preload="auto"
+>
+
+    <source
+        src="sound.mp3"
+        type="audio/mpeg"
+    >
+
+</audio>
+<!-- LIVE NOTIFICATION -->
+
+<div id="liveNotification" class="live-notification">
+
+    <div class="live-dot"></div>
+
+    <div>
+
+        <div class="live-title">
+            New Order Received 🚀
+        </div>
+
+        <div class="live-subtitle">
+            VeggieGo realtime order alert
+        </div>
+
+    </div>
+
+</div>
+    <!-- SCRIPT -->
+
+    <script
+        type="module"
+        src="script.js"
+    >
+    </script>
+
+</body>
+
+</html>

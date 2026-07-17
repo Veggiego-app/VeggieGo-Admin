@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>
+
+Customer Details
+
+</title>
+
+<link
+rel="stylesheet"
+href="style.css">
+
+<link
+rel="stylesheet"
+href="customers.css">
+
+</head>
+
+<body>
+
+<script type="module">
+
+import { auth } from "./firebase.js"
+
+import {
+
+onAuthStateChanged
+
+}
+
+from
+
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+onAuthStateChanged(
+
+auth,
+
+async(user)=>{
+
+if(!user){
+
+location.href="login.html"
+
+return
+
+}
+
+const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+if(
+
+!adminEmails.includes(user.email)
+
+){
+
+await auth.signOut()
+
+alert("Access Denied")
+
+location.href="login.html"
+
+}
+
+})
+
+</script>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+<div class="logo">
+
+🍃 VeggieGo
+
+</div>
+
+<a href="index.html">
+
+📊 Dashboard
+
+</a>
+
+<a href="restaurants.html">
+
+🍽 Restaurants
+
+</a>
+
+<a href="riders.html">
+
+🛵 Riders
+
+</a>
+
+<a
+href="customers.html"
+class="active">
+
+👤 Customers
+
+</a>
+
+<a href="analytics.html">
+
+📈 Analytics
+
+</a>
+
+<a href="cod-settlement.html">
+💵 COD Settlement
+</a>
+
+<a href="settings.html">
+
+⚙️ Settings
+
+</a>
+
+<div class="admin-profile">
+
+<div class="admin-name">
+
+VeggieGo Admin
+
+</div>
+
+<div class="admin-role">
+
+🟢 Super Admin
+
+</div>
+
+<button
+id="logoutBtn"
+class="logout-btn">
+
+🚪 Logout
+
+</button>
+
+</div>
+
+</div>
+
+<!-- MAIN -->
+
+<div class="main">
+
+<div class="topbar">
+
+<div class="title">
+
+Customer Details
+
+</div>
+
+</div>
+<!-- CUSTOMER PROFILE -->
+
+<div class="details-card">
+
+<div class="profile-header">
+
+<div class="profile-avatar">
+
+👤
+
+</div>
+
+<div class="profile-info">
+
+<h2 id="customerName">
+
+Loading...
+
+</h2>
+
+<div class="profile-subtitle">
+
+<span id="customerCode">
+
+VGC000000
+
+</span>
+
+&nbsp; • &nbsp;
+
+<span id="customerStatus">
+
+Active
+
+</span>
+
+</div>
+
+</div>
+
+<div class="profile-action">
+
+<button
+id="blockBtn"
+class="action-btn reject-btn-table">
+
+🚫 Block Customer
+
+</button>
+
+</div>
+
+</div>
+
+<div class="profile-grid">
+
+<div class="info-box">
+
+<div class="info-title">
+
+Mobile Number
+
+</div>
+
+<div
+class="info-value"
+id="customerPhone">
+
+-
+
+</div>
+
+</div>
+
+<div class="info-box">
+
+<div class="info-title">
+
+Firebase UID
+
+</div>
+
+<div
+class="info-value uid-text"
+id="customerUid">
+
+-
+
+</div>
+
+</div>
+
+<div class="info-box">
+
+<div class="info-title">
+
+Joined Date
+
+</div>
+
+<div
+class="info-value"
+id="joinedDate">
+
+-
+
+</div>
+
+</div>
+
+<div class="info-box">
+
+<div class="info-title">
+
+Last Login
+
+</div>
+
+<div
+class="info-value"
+id="lastLogin">
+
+-
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- CUSTOMER STATS -->
+
+<div class="customer-cards">
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Total Orders
+
+</div>
+
+<div
+class="card-value"
+id="totalOrders">
+
+0
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Completed Orders
+
+</div>
+
+<div
+class="card-value green"
+id="completedOrders">
+
+0
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Cancelled Orders
+
+</div>
+
+<div
+class="card-value red"
+id="cancelledOrders">
+
+0
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Total Spend
+
+</div>
+
+<div
+class="card-value blue"
+id="totalSpend">
+
+₹0
+
+</div>
+
+</div>
+
+</div>
+<!-- ADDRESSES -->
+
+<div class="details-card">
+
+<h2 class="section-title">
+
+📍 Saved Addresses
+
+</h2>
+
+<div
+id="addressesContainer">
+
+<div class="empty-row">
+
+No Addresses Found
+
+</div>
+
+</div>
+
+</div>
+
+<!-- RECENT ORDERS -->
+
+<div class="details-card"
+style="margin-top:25px;">
+
+<h2 class="section-title">
+
+🧾 Recent Orders
+
+</h2>
+
+<div class="table-container">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+
+Order ID
+
+</th>
+
+<th>
+
+Date
+
+</th>
+
+<th>
+
+Restaurant
+
+</th>
+
+<th>
+
+Items
+
+</th>
+
+<th>
+
+Amount
+
+</th>
+
+<th>
+
+Payment
+
+</th>
+
+<th>
+
+Status
+
+</th>
+
+<th>
+
+Action
+
+</th>
+
+</tr>
+
+</thead>
+
+<tbody
+id="recentOrdersTable">
+
+<tr>
+
+<td
+colspan="8"
+class="empty-row">
+
+Loading...
+
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<!-- ORDER SUMMARY -->
+
+<div
+class="details-card"
+style="margin-top:25px;">
+
+<h2 class="section-title">
+
+📊 Order Summary
+
+</h2>
+
+<div class="customer-cards">
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Average Order Value
+
+</div>
+
+<div
+class="card-value"
+id="averageOrderValue">
+
+₹0
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Last Order
+
+</div>
+
+<div
+class="card-value"
+id="lastOrderDate"
+style="font-size:22px;">
+
+-
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Favourite Restaurant
+
+</div>
+
+<div
+class="card-value"
+id="favoriteRestaurant"
+style="font-size:22px;">
+
+-
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Last Order Status
+
+</div>
+
+<div
+class="card-value"
+id="lastOrderStatus"
+style="font-size:22px;">
+
+-
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+<!-- END MAIN -->
+
+<script
+type="module"
+src="customer-details.js">
+</script>
+
+</body>
+
+</html>

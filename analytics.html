@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VeggieGo Analytics</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="analytics.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <script type="module">
+        import { auth } from "./firebase.js"
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+        onAuthStateChanged(
+auth,
+async (user) => {
+
+    if (!user) {
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+    const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+    if (
+
+        !adminEmails.includes(
+            user.email
+        )
+
+    ) {
+
+        await auth.signOut()
+
+        alert(
+            "Access Denied"
+        )
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+})
+    </script>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            🍃 VeggieGo
+        </div>
+
+        <div class="menu">
+            <a href="index.html" class="menu-item">
+                📊 Dashboard
+            </a>
+
+            <a href="restaurants.html" class="menu-item">
+                🍽 Restaurants
+            </a>
+
+            <a href="riders.html" class="menu-item">
+                🚚 Riders
+            </a>
+
+            <a href="customers.html" class="menu-item">
+    👤 Customers
+</a>
+
+            <a href="analytics.html" class="menu-item active">
+                📊 Analytics
+            </a>
+            <a href="cod-settlement.html" class="menu-item">
+💵 COD Settlement
+</a>
+
+            <a href="settings.html" class="menu-item">
+                ⚙ Settings
+            </a>
+        </div>
+
+        <div class="admin-profile">
+            <div class="admin-name">
+                VeggieGo Admin
+            </div>
+
+            <div class="admin-role">
+                🟢 Super Admin
+            </div>
+
+            <button class="logout-btn" id="logoutBtn">
+                ⎋ Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="title">
+                📊 Analytics Dashboard
+            </div>
+
+            <div class="live-box">
+                🟢 LIVE
+            </div>
+        </div>
+
+        <!-- ANALYTICS CONTAINER -->
+        <div class="analytics-container">
+
+            <!-- TOP STATISTICS SECTION -->
+            <div class="analytics-section">
+                <h2 class="section-title">📈 Top Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalOrders">0</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalRevenue">₹0</div>
+                        <div class="stat-label">Total Revenue</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="todaysOrders">0</div>
+                        <div class="stat-label">Today's Orders</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="todaysRevenue">₹0</div>
+                        <div class="stat-label">Today's Revenue</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDER STATUS SECTION -->
+            <div class="analytics-section">
+                <h2 class="section-title">📋 Order Status Breakdown</h2>
+                <div class="stats-grid">
+                    <div class="stat-card small">
+                        <div class="stat-value" id="pendingOrders">0</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-card small">
+                        <div class="stat-value" id="approvedOrders">0</div>
+                        <div class="stat-label">Approved</div>
+                    </div>
+                    <div class="stat-card small">
+                        <div class="stat-value" id="preparingOrders">0</div>
+                        <div class="stat-label">Preparing</div>
+                    </div>
+                    <div class="stat-card small">
+                        <div class="stat-value" id="readyOrders">0</div>
+                        <div class="stat-label">Ready For Pickup</div>
+                    </div>
+                    <div class="stat-card small">
+                        <div class="stat-value" id="riderAssignedOrders">0</div>
+                        <div class="stat-label">Rider Assigned</div>
+                    </div>
+                    <div class="stat-card small">
+                        <div class="stat-value" id="onWayOrders">0</div>
+                        <div class="stat-label">On The Way</div>
+                    </div>
+                    <div class="stat-card small">
+                        <div class="stat-value" id="completedOrders">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card small">
+                        <div class="stat-value" id="cancelledOrders">0</div>
+                        <div class="stat-label">Cancelled</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESTAURANT & RIDER STATS -->
+            <div class="analytics-section">
+                <h2 class="section-title">🏪 Restaurant & Riders Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalRestaurants">0</div>
+                        <div class="stat-label">Total Restaurants</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="activeRestaurants">0</div>
+                        <div class="stat-label">Active Restaurants</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalRiders">0</div>
+                        <div class="stat-label">Total Riders</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="onlineRiders">0</div>
+                        <div class="stat-label">Online Riders</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REVENUE ANALYTICS -->
+            <div class="analytics-section">
+                <h2 class="section-title">💰 Revenue Analytics</h2>
+                <div class="chart-buttons">
+                    <button class="chart-btn active" data-chart="dailyRevenue">Daily</button>
+                    <button class="chart-btn" data-chart="weeklyRevenue">Weekly</button>
+                    <button class="chart-btn" data-chart="monthlyRevenue">Monthly</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- ORDER ANALYTICS -->
+            <div class="analytics-section">
+                <h2 class="section-title">📦 Order Analytics</h2>
+                <div class="chart-buttons">
+                    <button class="chart-btn active" data-chart="dailyOrders">Daily</button>
+                    <button class="chart-btn" data-chart="weeklyOrders">Weekly</button>
+                    <button class="chart-btn" data-chart="monthlyOrders">Monthly</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+
+            <!-- PAYMENT ANALYTICS -->
+            <div class="analytics-section">
+                <h2 class="section-title">💳 Payment Analytics</h2>
+                <div class="payment-grid">
+                    <div class="payment-card">
+                        <div class="payment-stat">
+                            <div class="payment-count" id="codOrders">0</div>
+                            <div class="payment-label">COD Orders</div>
+                        </div>
+                    </div>
+                    <div class="payment-card">
+                        <div class="payment-stat">
+                            <div class="payment-count" id="onlineOrders">0</div>
+                            <div class="payment-label">Online Payment Orders</div>
+                        </div>
+                    </div>
+                    <div class="payment-card">
+                        <div class="payment-stat">
+                            <div class="payment-count" id="codRevenue">₹0</div>
+                            <div class="payment-label">COD Revenue</div>
+                        </div>
+                    </div>
+                    <div class="payment-card">
+                        <div class="payment-stat">
+                            <div class="payment-count" id="onlineRevenue">₹0</div>
+                            <div class="payment-label">Online Revenue</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ZONE ANALYTICS -->
+            <div class="analytics-section">
+                <h2 class="section-title">🗺️ Zone Analytics</h2>
+                <div class="zone-grid">
+                    <div class="zone-card">
+                        <div class="zone-icon">🏙️</div>
+                        <div class="zone-name">Gandhidham</div>
+                        <div class="zone-count" id="gandhidhamOrders">0 Orders</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="zone-icon">🏙️</div>
+                        <div class="zone-name">Adipur</div>
+                        <div class="zone-count" id="adipurOrders">0 Orders</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="zone-icon">🏙️</div>
+                        <div class="zone-name">Anjar</div>
+                        <div class="zone-count" id="anjarOrders">0 Orders</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="zone-icon">🏙️</div>
+                        <div class="zone-name">Bhuj</div>
+                        <div class="zone-count" id="bhujOrders">0 Orders</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP RESTAURANTS -->
+            <div class="analytics-section">
+                <h2 class="section-title">🍽️ Top Restaurants</h2>
+                <div class="top-restaurants-container">
+                    <div class="restaurant-tabs">
+                        <button class="restaurant-tab active" data-tab="orders">By Orders</button>
+                        <button class="restaurant-tab" data-tab="revenue">By Revenue</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="topRestaurantsTable">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Restaurant Name</th>
+                                    <th>Orders</th>
+                                    <th>Revenue</th>
+                                    <th>Avg Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topRestaurantsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP RIDERS -->
+            <div class="analytics-section">
+                <h2 class="section-title">🏍️ Top Riders</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Rider Name</th>
+                                <th>Deliveries</th>
+                                <th>Earnings</th>
+                                <th>Avg Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topRidersBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- COUPON ANALYTICS -->
+            <div class="analytics-section">
+                <h2 class="section-title">🎁 Coupon Analytics</h2>
+                <div class="coupon-grid">
+                    <div class="coupon-card">
+                        <div class="coupon-stat">
+                            <div class="coupon-count" id="totalCouponsUsed">0</div>
+                            <div class="coupon-label">Total Coupons Used</div>
+                        </div>
+                    </div>
+                    <div class="coupon-card">
+                        <div class="coupon-stat">
+                            <div class="coupon-count" id="totalDiscountGiven">₹0</div>
+                            <div class="coupon-label">Total Discount Given</div>
+                        </div>
+                    </div>
+                    <div class="coupon-card">
+                        <div class="coupon-stat">
+                            <div class="coupon-code" id="mostUsedCoupon">-</div>
+                            <div class="coupon-label">Most Used Coupon</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- PROFIT ANALYTICS -->
+
+<div class="analytics-section">
+
+    <h2 class="section-title">
+        💰 Profit Analytics
+    </h2>
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <div
+                class="stat-value"
+                id="totalProfit"
+            >
+                ₹0
+            </div>
+
+            <div class="stat-label">
+                Total Profit
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div
+                class="stat-value"
+                id="todayProfit"
+            >
+                ₹0
+            </div>
+
+            <div class="stat-label">
+                Today's Profit
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div
+                class="stat-value"
+                id="restaurantPayout"
+            >
+                ₹0
+            </div>
+
+            <div class="stat-label">
+                Restaurant Payout
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div
+                class="stat-value"
+                id="riderExpense"
+            >
+                ₹0
+            </div>
+
+            <div class="stat-label">
+                Rider Expense
+            </div>
+        </div>
+
+    </div>
+
+</div>
+            <!-- COMMISSION ANALYTICS -->
+            <div class="analytics-section">
+                <h2 class="section-title">💼 Commission Analytics</h2>
+                <div class="commission-grid">
+                    <div class="commission-card">
+                        <div class="commission-stat">
+                            <div class="commission-amount" id="restaurantCommission">₹0</div>
+                            <div class="commission-label">Restaurant Commission</div>
+                        </div>
+                    </div>
+                    <div class="commission-card">
+                        <div class="commission-stat">
+                            <div class="commission-amount" id="deliveryFees">₹0</div>
+                            <div class="commission-label">Delivery Fees Collected</div>
+                        </div>
+                    </div>
+                    <div class="commission-card">
+                        <div class="commission-stat">
+                            <div class="commission-amount" id="platformFees">₹0</div>
+                            <div class="commission-label">Platform Fees Collected</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ORDER PROFIT TABLE -->
+
+<div class="analytics-section">
+
+    <h2 class="section-title">
+        📋 Order Profit Analytics
+    </h2>
+    <div style="
+display:flex;
+gap:10px;
+margin:15px 0;
+">
+
+<select
+id="restaurantFilter"
+style="
+padding:10px;
+min-width:250px;
+"
+>
+
+<option value="ALL">
+All Restaurants
+</option>
+
+</select>
+
+<select
+id="riderFilter"
+style="
+padding:10px;
+min-width:250px;
+"
+>
+
+<option value="ALL">
+All Riders
+</option>
+
+</select>
+<select
+id="dateFilter"
+style="
+padding:10px;
+min-width:200px;
+"
+>
+
+<option value="ALL">
+All Dates
+</option>
+
+<option value="TODAY">
+Today
+</option>
+
+<option value="YESTERDAY">
+Yesterday
+</option>
+
+<option value="LAST7">
+Last 7 Days
+</option>
+
+<option value="MONTH">
+This Month
+</option>
+
+<option value="CUSTOM">
+Custom Range
+</option>
+
+</select>
+
+<input
+type="date"
+id="fromDate"
+style="
+display:none;
+padding:10px;
+"
+>
+
+<input
+type="date"
+id="toDate"
+style="
+display:none;
+padding:10px;
+"
+>
+
+<button
+id="applyDateBtn"
+style="
+display:none;
+padding:10px 15px;
+"
+>
+Apply
+</button>
+
+</div>
+    <button
+    id="exportExcelBtn"
+    style="
+    background:red;
+    color:white;
+    padding:15px;
+    font-size:20px;
+    display:block;
+    margin:20px 0;
+    "
+>
+📥 EXPORT EXCEL TEST
+</button>
+
+    <div class="table-container">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Order ID</th>
+<th>Date</th>
+<th>Restaurant ID</th>
+<th>Restaurant Name</th>
+
+<th>Item Total</th>
+<th>Packaging</th>
+<th>Delivery</th>
+<th>Platform</th>
+
+<th>GST</th>
+<th>Discount</th>
+<th>Tip</th>
+
+<th>Grand Total</th>
+
+<th>Commission %</th>
+<th>Commission Amt</th>
+
+<th>Payout</th>
+
+<th>Profit</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="profitTableBody">
+
+            </tbody>
+
+        </table>
+        <div
+style="
+display:flex;
+justify-content:center;
+align-items:center;
+gap:15px;
+padding:20px;
+"
+>
+
+<button
+id="profitPrevBtn"
+>
+⬅ Prev
+</button>
+
+<span
+id="profitPageInfo"
+>
+Page 1
+</span>
+
+<button
+id="profitNextBtn"
+>
+Next ➡
+</button>
+
+</div>
+
+    </div>
+
+</div>
+<div class="analytics-section">
+
+    <h2 class="section-title">
+        🏪 Restaurant Settlement Report
+    </h2>
+
+    <div class="table-container">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Restaurant</th>
+
+                    <th>Orders</th>
+
+                    <th>Sales</th>
+
+                    <th>Commission</th>
+
+                    <th>Payout</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="restaurantProfitBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+<div class="analytics-section">
+
+    <h2 class="section-title">
+        🏍 Rider Settlement Report
+    </h2>
+
+    <div class="table-container">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Rider</th>
+
+                    <th>Deliveries</th>
+
+                    <th>Total Earnings</th>
+
+                    <th>Avg Per Order</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="riderSettlementBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+            <!-- RECENT ACTIVITY -->
+            <div class="analytics-section">
+                <h2 class="section-title">📝 Recent Activity</h2>
+                <div class="activity-tabs">
+                    <button class="activity-tab active" data-activity="orders">Latest Orders</button>
+                    <button class="activity-tab" data-activity="restaurants">New Restaurants</button>
+                    <button class="activity-tab" data-activity="riders">New Riders</button>
+                </div>
+                <div class="activity-list" id="activityList">
+                    <div class="activity-item">
+                        <div class="activity-icon">📦</div>
+                        <div class="activity-content">
+                            <div class="activity-title">No recent activity</div>
+                            <div class="activity-time">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module" src="analytics.js"></script>
+</body>
+
+</html>

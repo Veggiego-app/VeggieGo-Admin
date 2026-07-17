@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8" />
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+/>
+
+<title>
+Restaurants
+</title>
+
+<link
+rel="stylesheet"
+href="style.css"
+/>
+<link
+rel="stylesheet"
+href="restaurant.css"
+/>
+
+</head>
+
+<body>
+
+<script type="module">
+
+import {
+auth
+}
+from "./firebase.js"
+
+import {
+onAuthStateChanged
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+onAuthStateChanged(
+auth,
+async (user) => {
+
+    if (!user) {
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+    const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+    if (
+
+        !adminEmails.includes(
+            user.email
+        )
+
+    ) {
+
+        await auth.signOut()
+
+        alert(
+            "Access Denied"
+        )
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+})
+
+</script>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+<div class="sidebar-logo">
+🍃 VeggieGo
+</div>
+
+<div class="menu">
+
+<div
+class="menu-item"
+onclick="
+window.location.href='index.html'
+"
+>
+📊 Dashboard
+</div>
+
+<div
+class="menu-item active"
+>
+🍽 Restaurants
+</div>
+
+<div
+class="menu-item"
+onclick="
+window.location.href='riders.html'
+"
+>
+🛵 Riders
+</div>
+
+<div
+class="menu-item"
+onclick="
+window.location.href='customers.html'
+"
+>
+👤 Customers
+</div>
+
+<div
+class="menu-item"
+onclick="
+window.location.href='analytics.html'
+"
+>
+📊 Analytics
+</div>
+
+<div
+        class="menu-item"
+        onclick="window.location.href='cod-settlement.html'"
+    >
+        💵 COD Settlement
+    </div>
+
+<div
+class="menu-item"
+onclick="
+window.location.href='settings.html'
+"
+>
+⚙ Settings
+</div>
+
+</div>
+<div class="admin-profile">
+
+    <div class="admin-name">
+        VeggieGo Admin
+    </div>
+
+    <div class="admin-role">
+        🟢 Super Admin
+    </div>
+
+    <button
+class="logout-btn"
+id="logoutBtn"
+>
+
+        ⎋ Logout
+
+    </button>
+
+</div>
+
+</div>
+
+<!-- MAIN -->
+
+<div class="main">
+
+<div class="topbar">
+
+<div class="title">
+Restaurant Management
+</div>
+
+<div style="
+display:flex;
+align-items:center;
+gap:10px;
+">
+
+<button
+id="addRestaurantBtn"
+style="
+background:#16a34a;
+color:white;
+border:none;
+padding:10px 18px;
+border-radius:10px;
+font-weight:bold;
+cursor:pointer;
+"
+>
+➕ Add Restaurant
+</button>
+
+<div class="live-box">
+🟢 LIVE
+</div>
+
+</div>
+
+</div>
+
+<!-- COUNTS -->
+
+<div class="dashboard-grid">
+
+<div class="dashboard-card">
+<h2 id="pendingRestaurants">
+0
+</h2>
+<p>
+Pending Approval
+</p>
+</div>
+
+<div class="dashboard-card">
+<h2 id="approvedRestaurants">
+0
+</h2>
+<p>
+Approved
+</p>
+</div>
+
+<div class="dashboard-card">
+<h2 id="rejectedRestaurants">
+0
+</h2>
+<p>
+Rejected
+</p>
+</div>
+
+<div class="dashboard-card">
+<h2 id="totalRestaurants">
+0
+</h2>
+<p>
+Total Restaurants
+</p>
+</div>
+
+</div>
+
+<!-- TABLE -->
+
+<div class="orders-section">
+
+<div class="table-container">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>RESTAURANT</th>
+
+<th>OWNER</th>
+
+<th>PHONE</th>
+
+<th>EMAIL</th>
+
+<th>ZONE</th>
+
+<th>TYPE</th>
+
+<th>STATUS</th>
+
+<th>LIVE STATUS</th>
+
+<th>CREATED</th>
+
+<th>ACTION</th>
+
+</tr>
+
+</thead>
+
+<tbody id="restaurantTable">
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ZONE MODAL -->
+
+<div
+class="modal"
+id="zoneModal"
+>
+
+<div class="modal-content">
+
+<h2>
+Assign Zone 😎
+</h2>
+
+<select id="zoneSelect">
+
+<option value="">
+Select Zone
+</option>
+
+<option>
+Gandhidham
+</option>
+
+<option>
+Adipur
+</option>
+
+<option>
+Anjar
+</option>
+
+<option>
+Bhuj
+</option>
+
+</select>
+
+<div class="modal-buttons">
+
+<button
+id="confirmApprove"
+class="approve-btn"
+>
+APPROVE
+</button>
+
+<button
+onclick="
+closeModal()
+"
+class="reject-btn"
+>
+CANCEL
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script
+type="module"
+src="restaurants.js"
+></script>
+
+</body>
+
+</html>

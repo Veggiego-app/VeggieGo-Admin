@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VeggieGo Settings</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="settings.css" />
+</head>
+
+<body>
+    <script type="module">
+        import { auth } from "./firebase.js"
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+        onAuthStateChanged(
+auth,
+async (user) => {
+
+    if (!user) {
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+    const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+    if (
+
+        !adminEmails.includes(
+            user.email
+        )
+
+    ) {
+
+        await auth.signOut()
+
+        alert(
+            "Access Denied"
+        )
+
+        window.location.href =
+        "login.html"
+
+        return
+
+    }
+
+})
+    </script>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            🍃 VeggieGo
+        </div>
+
+        <div class="menu">
+            <a href="index.html" class="menu-item">
+                📊 Dashboard
+            </a>
+
+            <a href="restaurants.html" class="menu-item">
+                🍽 Restaurants
+            </a>
+
+            <a href="riders.html" class="menu-item">
+                🚚 Riders
+            </a>
+
+            <a href="customers.html" class="menu-item">
+    👤 Customers
+</a>
+
+            <a href="analytics.html" class="menu-item">
+                📊 Analytics
+            </a>
+
+            <a href="cod-settlement.html" class="menu-item">
+            💵 COD Settlement
+            </a>
+
+            <a href="settings.html" class="menu-item active">
+                ⚙ Settings
+            </a>
+        </div>
+
+        <div class="admin-profile">
+            <div class="admin-name">
+                VeggieGo Admin
+            </div>
+
+            <div class="admin-role">
+                🟢 Super Admin
+            </div>
+
+            <button class="logout-btn" id="logoutBtn">
+                ⎋ Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="title">
+                ⚙️ Settings & Configuration
+            </div>
+
+            <div class="live-box">
+                🟢 LIVE
+            </div>
+        </div>
+
+        <!-- SETTINGS CONTAINER -->
+        <div class="settings-container">
+
+            <!-- GENERAL SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">🏢 General Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label>App Name</label>
+                        <input type="text" id="appName" placeholder="VeggieGo" value="VeggieGo" />
+                    </div>
+                    <div class="form-group">
+                        <label>Company Name</label>
+                        <input type="text" id="companyName" placeholder="VeggieGo Inc." />
+                    </div>
+                    <div class="form-group">
+                        <label>Company Address</label>
+                        <textarea id="companyAddress" placeholder="Enter company address"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Support Number</label>
+                        <input type="tel" id="supportNumber" placeholder="+91-XXXXXXXXXX" />
+                    </div>
+                    <div class="form-group">
+                        <label>Support Email</label>
+                        <input type="email" id="supportEmail" placeholder="support@veggiogo.com" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARGES SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">💰 Charges Settings</h2>
+                <div class="settings-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Delivery Charge Per KM (₹)</label>
+                            <input type="number" id="deliveryCharge" value="10" min="0" step="0.5" />
+                        </div>
+                        <div class="form-group">
+                            <label>Platform Fee (%)</label>
+                            <input type="number" id="platformFee" value="3" min="0" max="100" step="0.5" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Packaging Fee (₹)</label>
+                            <input type="number" id="packagingFee" value="5" min="0" step="0.5" />
+                        </div>
+                        <div class="form-group">
+                            <label>GST Percentage (%)</label>
+                            <input type="number" id="gstPercentage" value="5" min="0" max="100" step="0.5" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Order Amount (₹)</label>
+                        <input type="number" id="minimumOrder" value="100" min="0" step="10" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMMISSION SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">📊 Commission Settings</h2>
+                <div class="settings-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Restaurant Commission (%)</label>
+                            <input type="number" id="restaurantCommission" value="5" min="0" max="100" step="0.5" />
+                        </div>
+                        <div class="form-group">
+                            <label>Rider Commission (%)</label>
+                            <input type="number" id="riderCommission" value="15" min="0" max="100" step="0.5" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+<!-- DELIVERY SETTINGS -->
+
+<div class="settings-section">
+
+    <h2 class="section-title">
+        🚚 Delivery Settings
+    </h2>
+
+    <div class="settings-form">
+
+        <div class="form-row">
+
+            <div class="form-group">
+                <label>Base Delivery Fee (₹)</label>
+                <input
+                    type="number"
+                    id="deliveryBaseFee"
+                    value="20"
+                />
+            </div>
+
+            <div class="form-group">
+                <label>Delivery Per KM (₹)</label>
+                <input
+                    type="number"
+                    id="deliveryPerKm"
+                    value="8"
+                />
+            </div>
+
+        </div>
+
+        <div class="form-row">
+
+            <div class="form-group">
+                <label>Maximum Delivery Distance (KM)</label>
+                <input
+                    type="number"
+                    id="maxDeliveryDistance"
+                    value="15"
+                />
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- RIDER SETTINGS -->
+
+<div class="settings-section">
+
+    <h2 class="section-title">
+        🏍 Rider Settings
+    </h2>
+
+    <div class="settings-form">
+
+        <div class="form-row">
+
+            <div class="form-group">
+                <label>Rider Base Pay (₹)</label>
+                <input
+                    type="number"
+                    id="riderBasePay"
+                    value="20"
+                />
+            </div>
+
+            <div class="form-group">
+                <label>Rider Per KM (₹)</label>
+                <input
+                    type="number"
+                    id="riderPerKm"
+                    value="10"
+                />
+            </div>
+
+        </div>
+
+        <div class="form-group">
+            <label>Minimum Rider Pay (₹)</label>
+            <input
+                type="number"
+                id="minimumRiderPay"
+                value="30"
+            />
+        </div>
+
+    </div>
+
+</div>
+
+<!-- RESTAURANT COMMISSION -->
+
+<div class="settings-section">
+
+    <h2 class="section-title">
+        🍽 Restaurant Commission
+    </h2>
+
+    <div class="settings-form">
+
+        <div class="form-group">
+            <label>Default Restaurant Commission (%)</label>
+            <input
+                type="number"
+                id="restaurantCommissionDefault"
+                value="30"
+            />
+        </div>
+
+    </div>
+
+</div>
+            <!-- FREE DELIVERY RULES -->
+
+<div class="settings-section">
+
+    <h2 class="section-title">
+        🎁 Free Delivery Rules
+    </h2>
+
+    <div class="settings-form">
+
+        <div id="freeDeliveryRulesContainer">
+
+        </div>
+
+        <button
+            type="button"
+            id="addFreeDeliveryRule"
+            class="btn-save"
+            style="
+            margin-top:15px;
+            width:auto;
+            padding:10px 20px;
+            "
+        >
+            ➕ Add Rule
+        </button>
+
+    </div>
+
+</div>
+            <!-- SURGE PRICING -->
+
+<div class="settings-section">
+
+    <h2 class="section-title">
+        ⚡ Surge Pricing
+    </h2>
+
+    <div class="settings-form">
+
+        <div id="surgeSlotsContainer">
+
+        </div>
+
+        <button
+            type="button"
+            id="addSurgeSlot"
+            class="btn-save"
+            style="
+            margin-top:15px;
+            width:auto;
+            padding:10px 20px;
+            "
+        >
+            ➕ Add Surge Slot
+        </button>
+
+    </div>
+
+</div>
+            <!-- COUPON SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">🎁 Coupon Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group toggle">
+                        <label>Enable Coupons</label>
+                        <label class="switch">
+                            <input type="checkbox" id="enableCoupons" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Default Coupon Code</label>
+                            <input type="text" id="defaultCoupon" placeholder="WELCOME50" />
+                        </div>
+                        <div class="form-group">
+                            <label>Coupon Discount Value (%)</label>
+                            <input type="number" id="couponDiscount" value="50" min="0" max="100" step="5" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BANNER SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">📸 Banner Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label>Home Banner Image URL</label>
+                        <input type="url" id="homeBanner" placeholder="https://example.com/home-banner.jpg" />
+                    </div>
+                    <div class="form-group">
+                        <label>Offer Banner Image URL</label>
+                        <input type="url" id="offerBanner" placeholder="https://example.com/offer-banner.jpg" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDER SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">📦 Order Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group toggle">
+                        <label>Auto Assign Rider</label>
+                        <label class="switch">
+                            <input type="checkbox" id="autoAssignRider" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group toggle">
+                        <label>Restaurant Approval Required</label>
+                        <label class="switch">
+                            <input type="checkbox" id="restaurantApproval" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group toggle">
+                        <label>Allow Customer Cancellation</label>
+                        <label class="switch">
+                            <input type="checkbox" id="allowCancellation" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATION SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">🔔 Notification Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group toggle">
+                        <label>Enable Push Notifications</label>
+                        <label class="switch">
+                            <input type="checkbox" id="enablePushNotifications" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group toggle">
+                        <label>Enable Rider Notifications</label>
+                        <label class="switch">
+                            <input type="checkbox" id="enableRiderNotifications" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group toggle">
+                        <label>Enable Restaurant Notifications</label>
+                        <label class="switch">
+                            <input type="checkbox" id="enableRestaurantNotifications" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ZONE SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">🗺️ Zone Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group toggle">
+                        <label>Gandhidham</label>
+                        <label class="switch">
+                            <input type="checkbox" id="zoneGandhidham" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group toggle">
+                        <label>Adipur</label>
+                        <label class="switch">
+                            <input type="checkbox" id="zoneAdlipur" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group toggle">
+                        <label>Anjar</label>
+                        <label class="switch">
+                            <input type="checkbox" id="zoneAnjar" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group toggle">
+                        <label>Bhuj</label>
+                        <label class="switch">
+                            <input type="checkbox" id="zoneBhuj" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAINTENANCE SETTINGS -->
+            <div class="settings-section">
+                <h2 class="section-title">🔧 Maintenance Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group toggle">
+                        <label>Maintenance Mode</label>
+                        <label class="switch">
+                            <input type="checkbox" id="maintenanceMode" />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" id="maintenanceMessageGroup" style="display: none;">
+                        <label>Maintenance Message</label>
+                        <textarea id="maintenanceMessage" placeholder="App is under maintenance. Please try again later."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="settings-actions">
+                <button class="btn-save" id="saveSettings">
+                    💾 Save Settings
+                </button>
+                <button class="btn-reset" id="resetSettings">
+                    🔄 Reset Settings
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module" src="settings.js"></script>
+</body>
+
+</html>

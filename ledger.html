@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+/>
+
+<title>
+Rider Ledger
+</title>
+
+<link
+rel="stylesheet"
+href="style.css"
+/>
+
+<link
+rel="stylesheet"
+href="ledger.css"
+/>
+
+</head>
+
+<body>
+
+<div class="main">
+<button
+onclick="
+window.location.href='cod-settlement.html'
+"
+>
+⬅ Back
+</button>
+
+<h1 id="riderName">
+Loading...
+</h1>
+<div
+id="riderPhone"
+class="rider-phone"
+>
+Loading...
+</div>
+
+<div class="ledger-cards">
+
+<div class="ledger-card">
+
+<h3>
+Collected
+</h3>
+
+<div id="collected">
+₹0
+</div>
+
+</div>
+
+<div class="ledger-card">
+
+<h3>
+Deposited
+</h3>
+
+<div id="deposited">
+₹0
+</div>
+
+</div>
+
+<div class="ledger-card">
+
+<h3>
+Balance
+</h3>
+
+<div id="balance">
+₹0
+</div>
+
+</div>
+
+</div>
+
+<br>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Date</th>
+
+<th>Amount</th>
+
+</tr>
+
+</thead>
+
+<tbody
+id="ledgerTable"
+>
+
+</tbody>
+
+</table>
+
+</div>
+
+<script
+type="module"
+src="ledger.js"
+></script>
+
+</body>
+
+</html>

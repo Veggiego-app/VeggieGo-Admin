@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>VeggieGo Customers</title>
+
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="customers.css">
+
+</head>
+
+<body>
+
+<script type="module">
+
+import { auth } from "./firebase.js"
+
+import {
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+
+onAuthStateChanged(auth,async(user)=>{
+
+if(!user){
+
+location.href="login.html"
+return
+
+}
+
+const adminEmails = [
+    "support@veggiego.co.in"
+]
+
+if(!adminEmails.includes(user.email)){
+
+await auth.signOut()
+
+alert("Access Denied")
+
+location.href="login.html"
+
+}
+
+})
+
+</script>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+<div class="logo">
+🍃 VeggieGo
+</div>
+
+<a href="index.html">
+📊 Dashboard
+</a>
+
+<a href="restaurants.html">
+🍽 Restaurants
+</a>
+
+<a href="riders.html">
+🛵 Riders
+</a>
+
+<a href="customers.html" class="active">
+👤 Customers
+</a>
+
+<a href="analytics.html">
+📈 Analytics
+</a>
+
+<a href="cod-settlement.html">
+💵 COD Settlement
+</a>
+
+<a href="settings.html">
+⚙️ Settings
+</a>
+
+<div class="admin-profile">
+
+<div class="admin-name">
+VeggieGo Admin
+</div>
+
+<div class="admin-role">
+🟢 Super Admin
+</div>
+
+<button
+class="logout-btn"
+id="logoutBtn">
+🚪 Logout
+</button>
+
+</div>
+
+</div>
+
+<!-- MAIN -->
+
+<div class="main">
+
+<!-- TOPBAR -->
+
+<div class="topbar">
+
+<div class="title">
+
+Customers
+
+</div>
+
+<div class="topbar-right">
+
+<div class="notification-bell"
+id="notificationBell">
+
+🔔
+
+<div
+class="notification-count"
+id="notificationCount">
+
+0
+
+</div>
+
+<div
+class="notification-dropdown"
+id="notificationDropdown">
+
+<div
+class="notification-header">
+
+Notifications
+
+</div>
+
+<div
+class="notification-list"
+id="notificationList">
+
+<div
+class="empty-notification">
+
+No Notifications
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- DASHBOARD -->
+
+<div class="dashboard">
+
+<div class="customer-cards">
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Total Customers
+
+</div>
+
+<div
+class="card-value"
+id="totalCustomers">
+
+0
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Active Customers
+
+</div>
+
+<div
+class="card-value green"
+id="activeCustomers">
+
+0
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+Blocked Customers
+
+</div>
+
+<div
+class="card-value red"
+id="blockedCustomers">
+
+0
+
+</div>
+
+</div>
+
+<div class="customer-card">
+
+<div class="card-title">
+
+New Customers Today
+
+</div>
+
+<div
+class="card-value blue"
+id="todayCustomers">
+
+0
+
+</div>
+
+</div>
+
+</div>
+
+<!-- SEARCH + FILTER -->
+
+<div class="customer-toolbar">
+
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="Search Name / Mobile / Customer Code / UID">
+
+    <select id="sortBy">
+
+        <option value="joined_desc">
+            Joined Date (Newest)
+        </option>
+
+        <option value="joined_asc">
+            Joined Date (Oldest)
+        </option>
+
+        <option value="code_asc">
+            Customer Code (A-Z)
+        </option>
+
+        <option value="code_desc">
+            Customer Code (Z-A)
+        </option>
+
+        <option value="name_asc">
+            Name (A-Z)
+        </option>
+
+        <option value="name_desc">
+            Name (Z-A)
+        </option>
+
+        <option value="orders_desc">
+            Total Orders
+        </option>
+
+        <option value="spend_desc">
+            Total Spend
+        </option>
+
+    </select>
+
+    <select id="rowsPerPage">
+
+        <option value="10">
+            10 / Page
+        </option>
+
+        <option value="25">
+            25 / Page
+        </option>
+
+        <option value="50">
+            50 / Page
+        </option>
+
+        <option value="100" selected>
+            100 / Page
+        </option>
+
+    </select>
+
+</div>
+
+<!-- TABLE -->
+
+<div class="table-container">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+
+Customer Name
+
+</th>
+
+<th>
+
+Mobile Number
+
+</th>
+
+<th>
+
+Customer Code
+
+</th>
+
+<th>
+
+Total Orders
+
+</th>
+
+<th>
+
+Total Spend
+
+</th>
+
+<th>
+
+Joined Date
+
+</th>
+
+<th>
+
+Status
+
+</th>
+
+<th>
+
+Action
+
+</th>
+
+</tr>
+
+</thead>
+
+<tbody id="customersTable">
+
+</tbody>
+
+</table>
+
+</div>
+<div class="pagination-bar">
+
+    <div id="paginationInfo">
+
+        Showing 0-0 of 0 Customers
+
+    </div>
+
+    <div class="pagination-buttons">
+
+        <button id="firstPage">
+            ⏮
+        </button>
+
+        <button id="prevPage">
+            ◀
+        </button>
+
+        <span id="pageNumbers"></span>
+
+        <button id="nextPage">
+            ▶
+        </button>
+
+        <button id="lastPage">
+            ⏭
+        </button>
+
+    </div>
+
+</div>
+
+</div>
+
+</div>
+
+<script
+type="module"
+src="customers.js"></script>
+
+</body>
+
+</html>

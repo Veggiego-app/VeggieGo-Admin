@@ -1,0 +1,133 @@
+/* RIDERS PAGE */
+
+.dashboard {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 15px;
+
+    margin-bottom: 25px;
+}
+
+.dash-card {
+
+    background: #0b1730;
+
+    border: 1px solid #1f2d4d;
+
+    border-radius: 18px;
+
+    padding: 20px;
+
+    min-width: 160px;
+
+    height: 110px;
+
+    flex: 1;
+
+    transition: 0.2s;
+}
+
+.dash-card:hover {
+
+    transform: translateY(-3px);
+
+    border-color: #7c3aed;
+}
+
+.card-number {
+
+    font-size: 40px;
+
+    font-weight: bold;
+
+    margin-bottom: 10px;
+}
+
+.card-title {
+
+    color: #dbeafe;
+
+    font-size: 15px;
+}
+
+/* TABLE */
+
+.table-wrapper {
+
+    margin-top: 20px;
+}
+
+/* STATUS */
+
+.status-online {
+
+    background: #16a34a;
+
+    color: white;
+
+    padding: 8px 14px;
+
+    border-radius: 999px;
+
+    font-size: 12px;
+
+    font-weight: bold;
+}
+
+.status-offline {
+
+    background: #dc2626;
+
+    color: white;
+
+    padding: 8px 14px;
+
+    border-radius: 999px;
+
+    font-size: 12px;
+
+    font-weight: bold;
+}
+
+/* VIEW BUTTON */
+
+.view-btn-table {
+
+    background: #2563eb;
+
+    color: white !important;
+
+    border: none;
+
+    padding: 10px 18px;
+
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    font-weight: bold;
+
+    text-decoration: none;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-width: 90px;
+
+    height: 40px;
+
+    transition: 0.2s;
+}
+
+.view-btn-table:hover {
+
+    background: #1d4ed8;
+
+    transform: scale(1.05);
+}
