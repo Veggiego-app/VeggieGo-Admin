@@ -120,6 +120,24 @@ async function loadRestaurant() {
 
     const r =
         snap.data()
+
+        const isTemporarilyClosed =
+    r.temporaryClosed === true
+
+const restaurantStatusIcon =
+    isTemporarilyClosed
+        ? "🟠"
+        : r.online
+            ? "🟢"
+            : "🔴"
+
+const restaurantStatusText =
+    isTemporarilyClosed
+        ? "TEMPORARILY CLOSED"
+        : r.online
+            ? "ONLINE"
+            : "OFFLINE"
+
         window.currentOpeningTime =
     r.openingTime
     || "10:00 AM"
@@ -172,12 +190,18 @@ ${r.status || "-"}
 <div class="dashboard-card">
 
 <h2>
-${r.online ? "🟢" : "🔴"}
+${restaurantStatusIcon}
 </h2>
 
 <p>
-${r.online ? "ONLINE" : "OFFLINE"}
+${restaurantStatusText}
 </p>
+
+${isTemporarilyClosed && r.closeReason
+    ? `<small style="color:#f59e0b;">
+        ${r.closeReason}
+       </small>`
+    : ""}
 
 </div>
 
@@ -349,6 +373,19 @@ class="approve-btn-table"
 >
 
 🕒 EDIT TIMING
+
+</button>
+
+<br><br>
+
+<button
+id="toggleTemporaryCloseBtn"
+class="${isTemporarilyClosed ? "approve-btn" : "reject-btn"}"
+>
+
+${isTemporarilyClosed
+    ? "🟢 REMOVE TEMPORARY CLOSE"
+    : "🟠 TEMPORARILY CLOSE"}
 
 </button>
 
@@ -2088,6 +2125,97 @@ document.addEventListener(
 
         }
 
+    }
+)
+
+/* ========================= */
+/* TEMPORARY CLOSE ON / OFF */
+/* ========================= */
+
+document.addEventListener(
+    "click",
+    async function(e) {
+
+        if (
+            e.target.id !==
+            "toggleTemporaryCloseBtn"
+        ) {
+            return
+        }
+
+        const snap =
+            await getDoc(ref)
+
+        const data =
+            snap.data()
+
+        if (
+            data.temporaryClosed === true
+        ) {
+
+            const confirmReopen =
+                confirm(
+                    "Restaurant se Temporary Close hatana hai?"
+                )
+
+            if (!confirmReopen) {
+                return
+            }
+
+            await updateDoc(
+                ref,
+                {
+                    temporaryClosed: false,
+
+                    closeReason: "",
+
+                    openingText: "",
+
+                    liveStatus:
+                        data.online === true
+                            ? "OPEN"
+                            : "CLOSED"
+                }
+            )
+
+        } else {
+
+            const reason =
+                prompt(
+                    "Temporary close ka reason likhiye:"
+                )
+
+            if (reason === null) {
+                return
+            }
+
+            if (reason.trim() === "") {
+
+                alert(
+                    "Temporary close reason zaroori hai"
+                )
+
+                return
+            }
+
+            await updateDoc(
+                ref,
+                {
+                    temporaryClosed: true,
+
+                    closeReason:
+                        reason.trim(),
+
+                    openingText:
+                        "Temporarily Closed",
+
+                    liveStatus:
+                        "TEMPORARILY_CLOSED"
+                }
+            )
+        }
+
+        loadRestaurant()
     }
 )
 
