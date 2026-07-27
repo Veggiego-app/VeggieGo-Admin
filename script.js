@@ -226,6 +226,199 @@ window.setFilter = function(filter) {
         
 }
 
+/*
+ * CUSTOMER PHONE NORMALIZE
+ *
+ * +919099116001 और 9099116001
+ * दोनों को एक customer माना जाएगा।
+ */
+function normalizeCustomerPhone(value) {
+
+    const digits =
+        String(value || "")
+            .replace(/\D/g, "")
+
+    return digits.slice(-10)
+}
+
+/*
+ * ORDER CUSTOMER ID
+ */
+function getOrderCustomerId(order) {
+
+    return String(
+        order.customerId ||
+        order.userId ||
+        order.uid ||
+        ""
+    ).trim()
+}
+
+/*
+ * ORDER CUSTOMER PHONE
+ */
+function getOrderCustomerPhone(order) {
+
+    return normalizeCustomerPhone(
+
+        order.customerPhone ||
+        order.userPhone ||
+        order.phone ||
+        order.mobile ||
+        ""
+    )
+}
+
+/*
+ * FIRESTORE TIMESTAMP TO MILLISECONDS
+ */
+function getOrderTimestamp(order) {
+
+    const value =
+        order.timestamp ||
+        order.createdAt ||
+        0
+
+    if (
+        value &&
+        typeof value.toMillis === "function"
+    ) {
+
+        return value.toMillis()
+    }
+
+    if (
+        value &&
+        typeof value.seconds === "number"
+    ) {
+
+        return value.seconds * 1000
+    }
+
+    if (
+        typeof value === "number"
+    ) {
+
+        return value
+    }
+
+    const parsedDate =
+        new Date(value).getTime()
+
+    return Number.isFinite(parsedDate)
+        ? parsedDate
+        : 0
+}
+
+/*
+ * CANCELLED ORDER CHECK
+ */
+function isCancelledOrder(order) {
+
+    const status =
+        String(
+            order.status || ""
+        ).toUpperCase()
+
+    return (
+
+        status === "CANCELLED" ||
+
+        status === "CUSTOMER_CANCELLED" ||
+
+        status === "RESTAURANT_CANCELLED"
+    )
+}
+
+/*
+ * CURRENT ORDER से पहले के orders count होंगे।
+ *
+ * पहले Customer ID match होगी।
+ * Customer ID missing होने पर mobile number match होगा।
+ * Cancelled orders count नहीं होंगे।
+ */
+function getPreviousOrderCount(currentOrder) {
+
+    const currentCustomerId =
+        getOrderCustomerId(
+            currentOrder
+        )
+
+    const currentCustomerPhone =
+        getOrderCustomerPhone(
+            currentOrder
+        )
+
+    const currentOrderTime =
+        getOrderTimestamp(
+            currentOrder
+        )
+
+    return allOrders.filter(
+        previousOrder => {
+
+            if (
+                previousOrder.id ===
+                currentOrder.id
+            ) {
+                return false
+            }
+
+            if (
+                isCancelledOrder(
+                    previousOrder
+                )
+            ) {
+                return false
+            }
+
+            const previousCustomerId =
+                getOrderCustomerId(
+                    previousOrder
+                )
+
+            const previousCustomerPhone =
+                getOrderCustomerPhone(
+                    previousOrder
+                )
+
+            const sameCustomerId =
+
+                currentCustomerId !== "" &&
+
+                previousCustomerId !== "" &&
+
+                currentCustomerId ===
+                previousCustomerId
+
+            const samePhoneNumber =
+
+                currentCustomerPhone.length === 10 &&
+
+                previousCustomerPhone.length === 10 &&
+
+                currentCustomerPhone ===
+                previousCustomerPhone
+
+            if (
+                !sameCustomerId &&
+                !samePhoneNumber
+            ) {
+                return false
+            }
+
+            const previousOrderTime =
+                getOrderTimestamp(
+                    previousOrder
+                )
+
+            return (
+                previousOrderTime <
+                currentOrderTime
+            )
+        }
+    ).length
+}
 // 🔥 RENDER ORDERS
 
 function renderOrders() {
@@ -412,11 +605,11 @@ ${order.customerPhone || "-"}
 </td>
 
 <td>
-${order.customerId || "-"}
+${order.customerId || order.userId || "-"}
 </td>
 
 <td>
-${order.previousOrders || 0}
+${getPreviousOrderCount(order)}
 </td>
 
 <td>
@@ -488,7 +681,14 @@ ${order.status || "-"}
 </td>
 
 <td>
-${order.customerZone || "-"}
+${
+    order.customerZone ||
+    order.deliveryZone ||
+    order.zone ||
+    order.customerCity ||
+    order.city ||
+    "-"
+}
 </td>
 
 <td>
@@ -496,7 +696,11 @@ ${order.storeName || order.restaurantName || "-"}
 </td>
 
 <td>
-${order.storeId || "-"}
+${
+    order.storeId ||
+    order.restaurantId ||
+    "-"
+}
 </td>
 
 <td>

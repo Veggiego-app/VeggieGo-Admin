@@ -1037,3 +1037,23 @@ right: -10px;
     flex-wrap:wrap;
 
 }
+.order-id-link {
+    cursor: pointer;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+    transition:
+        color 0.2s ease,
+        text-decoration-color 0.2s ease;
+}
+
+.order-id-link:hover {
+    color: #a855f7;
+    text-decoration: underline;
+}
+
+.order-id-link:focus-visible {
+    outline: 2px solid #a855f7;
+    outline-offset: 3px;
+    border-radius: 3px;
+}

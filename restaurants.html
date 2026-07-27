@@ -267,7 +267,11 @@ Total Restaurants
 
 <tr>
 
+<th>NO.</th>
+
 <th>RESTAURANT</th>
+
+<th>RESTAURANT PHONE</th>
 
 <th>OWNER</th>
 
@@ -276,8 +280,6 @@ Total Restaurants
 <th>EMAIL</th>
 
 <th>ZONE</th>
-
-<th>TYPE</th>
 
 <th>STATUS</th>
 
@@ -305,6 +307,8 @@ Total Restaurants
 
 <!-- ZONE MODAL -->
 
+<!-- APPROVE MODAL -->
+
 <div
 class="modal"
 id="zoneModal"
@@ -313,8 +317,14 @@ id="zoneModal"
 <div class="modal-content">
 
 <h2>
-Assign Zone 😎
+Approve Restaurant
 </h2>
+
+<br>
+
+<label for="zoneSelect">
+Select Zone
+</label>
 
 <select id="zoneSelect">
 
@@ -322,23 +332,54 @@ Assign Zone 😎
 Select Zone
 </option>
 
-<option>
+<option value="Gandhidham">
 Gandhidham
 </option>
 
-<option>
+<option value="Adipur">
 Adipur
 </option>
 
-<option>
+<option value="Anjar">
 Anjar
 </option>
 
-<option>
+<option value="Bhuj">
 Bhuj
 </option>
 
 </select>
+
+<br><br>
+
+<label for="approveReason">
+Approval Reason
+</label>
+
+<textarea
+id="approveReason"
+placeholder="Example: Documents verified and restaurant approved."
+rows="4"
+style="
+width:100%;
+padding:12px;
+border-radius:10px;
+border:1px solid #374151;
+box-sizing:border-box;
+resize:vertical;
+"
+></textarea>
+
+<p
+id="approveReasonCount"
+style="
+font-size:13px;
+margin-top:6px;
+color:#9ca3af;
+"
+>
+Minimum 10 characters required
+</p>
 
 <div class="modal-buttons">
 
@@ -350,10 +391,74 @@ APPROVE
 </button>
 
 <button
-onclick="
-closeModal()
-"
+onclick="closeModal()"
 class="reject-btn"
+>
+CANCEL
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- REJECT MODAL -->
+
+<div
+class="modal"
+id="rejectModal"
+>
+
+<div class="modal-content">
+
+<h2>
+Reject Restaurant
+</h2>
+
+<br>
+
+<label for="rejectReason">
+Reject Reason
+</label>
+
+<textarea
+id="rejectReason"
+placeholder="Example: FSSAI document is missing or invalid."
+rows="4"
+style="
+width:100%;
+padding:12px;
+border-radius:10px;
+border:1px solid #374151;
+box-sizing:border-box;
+resize:vertical;
+"
+></textarea>
+
+<p
+id="rejectReasonCount"
+style="
+font-size:13px;
+margin-top:6px;
+color:#9ca3af;
+"
+>
+Minimum 10 characters required
+</p>
+
+<div class="modal-buttons">
+
+<button
+id="confirmReject"
+class="reject-btn"
+>
+REJECT
+</button>
+
+<button
+onclick="closeRejectModal()"
+class="approve-btn"
 >
 CANCEL
 </button>

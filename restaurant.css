@@ -1135,3 +1135,98 @@ color:#ffffff;
 border-color:#22c55e;
 
 }
+.restaurant-row {
+    transition:
+        opacity 0.15s ease,
+        background 0.15s ease;
+}
+
+.restaurant-row:hover {
+    background:
+        rgba(255, 255, 255, 0.03);
+}
+
+.restaurant-row.dragging {
+    opacity:
+        0.45;
+
+    background:
+        rgba(139, 92, 246, 0.18);
+}
+
+.drag-handle {
+    cursor:
+        grab;
+
+    text-align:
+        center;
+
+    white-space:
+        nowrap;
+
+    user-select:
+        none;
+
+    min-width:
+        65px;
+}
+
+.drag-handle:active {
+    cursor:
+        grabbing;
+}
+
+.row-number {
+    display:
+        inline-block;
+
+    min-width:
+        20px;
+
+    font-weight:
+        700;
+
+    color:
+        #ffffff;
+}
+
+.drag-icon {
+    margin-left:
+        8px;
+
+    font-size:
+        18px;
+
+    color:
+        #9ca3af;
+}
+
+.drag-handle:hover .drag-icon {
+    color:
+        #ffffff;
+}
+.restaurant-name-button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        color 0.2s ease,
+        text-decoration-color 0.2s ease;
+}
+
+.restaurant-name-button:hover {
+    color: #a855f7;
+    text-decoration: underline;
+}
+
+.restaurant-name-button:focus-visible {
+    outline: 2px solid #a855f7;
+    outline-offset: 3px;
+    border-radius: 3px;
+}

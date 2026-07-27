@@ -120,8 +120,11 @@ ${order.restaurantName || "VeggieGo"}
 
 <div class="order-meta">
 
-<div class="meta-pill">
-🧾 ${orderId.slice(0,10)}
+<div
+class="meta-pill order-id-pill"
+title="${order.orderId || orderId}"
+>
+🧾 ${order.orderId || orderId}
 </div>
 
 <div class="meta-pill">
@@ -461,22 +464,27 @@ order.adminStatusReason
 
 
 
-<div class="cancel-box">
+<div
+class="
+cancel-box
+${
+    String(
+        order.adminStatusTarget || ""
+    ).toUpperCase() === "APPROVED"
 
+    ? "admin-status-approved"
 
+    : ""
+}
+"
+>
 
 <div class="cancel-top">
 
-
-
 <div>
 
-
-
 <h3>
-
 👨‍💼 Admin Status Change
-
 </h3>
 
 
@@ -780,7 +788,7 @@ CANCELLED
 
 <button
 class="action-btn"
-onclick="window.print()"
+id="printOrderBtn"
 >
 
 🖨 PRINT ORDER
@@ -830,6 +838,10 @@ id="saveNoteBtn"
 </div>
 
 </div>
+
+<!-- PRINT INVOICE: visible only while printing -->
+
+${buildPrintInvoice(order)}
 
 `
 
@@ -910,6 +922,23 @@ if (mapBtn) {
 
             "_blank"
         )
+    }
+}
+// PRINT COMPLETE INVOICE
+
+const printOrderBtn =
+    document.getElementById(
+        "printOrderBtn"
+    )
+
+if (printOrderBtn) {
+
+    printOrderBtn.onclick = () => {
+
+        document.title =
+            `VeggieGo Invoice - ${order.orderId || orderId}`
+
+        window.print()
     }
 }
 
@@ -1386,6 +1415,636 @@ function getTotalItems(items) {
     return items.length
 }
 
+// PRINT INVOICE
+
+function buildPrintInvoice(order) {
+
+    const fullOrderId =
+        order.orderId || orderId || "-"
+
+    const itemTotal =
+        Number(order.itemTotal || 0)
+
+    const deliveryFee =
+        Number(order.deliveryFee || 0)
+
+    const packagingFee =
+        Number(order.packagingFee || 0)
+
+    const platformFee =
+        Number(order.platformFee || 0)
+
+    const surgeFee =
+        Number(order.surgeFee || 0)
+
+    const gstOnItems =
+        Number(order.gstOnItems || 0)
+
+    const gstOnDelivery =
+        Number(order.gstOnDelivery || 0)
+
+    const gstOnPackaging =
+        Number(order.gstOnPackaging || 0)
+
+    const gstOnPlatform =
+        Number(order.gstOnPlatform || 0)
+
+    const discount =
+        Number(order.discount || 0)
+
+    const tip =
+        Number(order.tip || 0)
+
+    const calculatedTotal =
+        itemTotal +
+        deliveryFee +
+        packagingFee +
+        platformFee +
+        surgeFee +
+        gstOnItems +
+        gstOnDelivery +
+        gstOnPackaging +
+        gstOnPlatform +
+        tip -
+        discount
+
+    const grandTotal =
+        Number(
+            order.total ??
+            calculatedTotal
+        )
+
+    const paymentStatus =
+        order.paymentReceived
+
+            ? "RECEIVED"
+
+            : order.cashCollected
+
+                ? "RECEIVED BY RIDER"
+
+                : "NOT RECEIVED"
+
+    const adminTarget =
+        String(
+            order.adminStatusTarget || ""
+        ).toUpperCase()
+
+    const adminClass =
+        adminTarget === "APPROVED"
+
+            ? "invoice-admin-approved"
+
+            : "invoice-admin-cancelled"
+
+    return `
+
+<section
+id="printInvoice"
+class="print-invoice"
+>
+
+<header class="invoice-header">
+
+<div>
+
+<div class="invoice-brand">
+VeggieGo
+</div>
+
+<div class="invoice-tagline">
+Pure Veg Food Delivery
+</div>
+
+</div>
+
+<div class="invoice-heading">
+
+<h1>
+ORDER INVOICE
+</h1>
+
+<p>
+Order ID:
+<strong>
+${fullOrderId}
+</strong>
+</p>
+
+<p>
+Date:
+${formatDate(order.timestamp)}
+</p>
+
+</div>
+
+</header>
+
+<div class="invoice-status-row">
+
+<span>
+Status
+</span>
+
+<strong>
+${order.status || "PENDING"}
+</strong>
+
+</div>
+
+<div class="invoice-info-grid">
+
+<div class="invoice-info-card">
+
+<h3>
+Restaurant Details
+</h3>
+
+<p>
+<strong>
+${order.restaurantName || "VeggieGo Restaurant"}
+</strong>
+</p>
+
+<p>
+${order.restaurantAddress || order.restaurantArea || "-"}
+</p>
+
+<p>
+Phone:
+${order.restaurantPhone || "-"}
+</p>
+
+<p>
+Store ID:
+${order.restaurantId || order.storeId || "-"}
+</p>
+
+</div>
+
+<div class="invoice-info-card">
+
+<h3>
+Customer Details
+</h3>
+
+<p>
+<strong>
+${order.customerName || "-"}
+</strong>
+</p>
+
+<p>
+Phone:
+${order.customerPhone || "-"}
+</p>
+
+<p>
+${
+
+    [
+        order.house,
+        order.area,
+        order.landmark,
+        order.city,
+        order.pincode
+    ]
+        .filter(Boolean)
+        .join(", ")
+
+    || "-"
+
+}
+</p>
+
+</div>
+
+<div class="invoice-info-card">
+
+<h3>
+Rider Details
+</h3>
+
+<p>
+<strong>
+${order.riderName || "Not Assigned"}
+</strong>
+</p>
+
+<p>
+Phone:
+${order.riderPhone || "-"}
+</p>
+
+<p>
+Rider ID:
+${order.riderId || "-"}
+</p>
+
+</div>
+
+<div class="invoice-info-card">
+
+<h3>
+Payment Details
+</h3>
+
+<p>
+Method:
+<strong>
+${order.paymentMethod || "COD"}
+</strong>
+</p>
+
+<p>
+Payment:
+<strong>
+${paymentStatus}
+</strong>
+</p>
+
+<p>
+Items:
+${getTotalItems(order.items)}
+</p>
+
+</div>
+
+</div>
+
+${
+
+    order.adminStatusReason
+
+        ? `
+
+<div
+class="invoice-admin-box ${adminClass}"
+>
+
+<div>
+
+<h3>
+Admin Status Change
+</h3>
+
+<p>
+Status:
+<strong>
+${order.adminStatusTarget || "-"}
+</strong>
+</p>
+
+<p>
+Reason:
+${order.adminStatusReason}
+</p>
+
+</div>
+
+<strong class="invoice-admin-badge">
+ADMIN
+</strong>
+
+</div>
+
+`
+
+        : ""
+
+}
+
+<table class="invoice-items-table">
+
+<thead>
+
+<tr>
+
+<th>
+Item Details
+</th>
+
+<th>
+Qty
+</th>
+
+<th>
+Rate
+</th>
+
+<th>
+Amount
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+${formatInvoiceItems(order.items)}
+
+</tbody>
+
+</table>
+
+<div class="invoice-bottom-grid">
+
+<div class="invoice-note">
+
+<h3>
+Order Note
+</h3>
+
+<p>
+${
+
+    order.orderNote ||
+    order.customerNote ||
+    "No special instruction"
+
+}
+</p>
+
+</div>
+
+<div class="invoice-totals">
+
+${invoiceAmountRow(
+    "Item Total",
+    itemTotal
+)}
+
+${invoiceAmountRow(
+    "Delivery Fee",
+    deliveryFee
+)}
+
+${invoiceAmountRow(
+    "Packaging Fee",
+    packagingFee
+)}
+
+${invoiceAmountRow(
+    "Platform Fee",
+    platformFee
+)}
+
+${invoiceAmountRow(
+
+    order.surgeReason
+
+        ? `Surge Fee (${order.surgeReason})`
+
+        : "Surge Fee",
+
+    surgeFee
+)}
+
+${invoiceAmountRow(
+    "GST on Items",
+    gstOnItems
+)}
+
+${invoiceAmountRow(
+    "GST on Delivery",
+    gstOnDelivery
+)}
+
+${invoiceAmountRow(
+    "GST on Packaging",
+    gstOnPackaging
+)}
+
+${invoiceAmountRow(
+    "GST on Platform",
+    gstOnPlatform
+)}
+
+${invoiceAmountRow(
+    "Tip",
+    tip
+)}
+
+${invoiceAmountRow(
+    "Discount",
+    discount,
+    true
+)}
+
+<div class="invoice-grand-total">
+
+<span>
+Grand Total
+</span>
+
+<strong>
+₹${money(grandTotal)}
+</strong>
+
+</div>
+
+</div>
+
+</div>
+
+<footer class="invoice-footer">
+
+<p>
+Thank you for ordering with VeggieGo.
+</p>
+
+<p>
+This is a computer-generated invoice.
+</p>
+
+</footer>
+
+</section>
+
+`
+}
+
+function formatInvoiceItems(items) {
+
+    if (
+        !items ||
+        items.length === 0
+    ) {
+
+        return `
+
+<tr>
+
+<td colspan="4">
+No items found
+</td>
+
+</tr>
+
+`
+    }
+
+    return items.map(item => {
+
+        const quantity =
+            Number(
+                item.quantity || 1
+            )
+
+        const rate =
+            Number(
+
+                item.variantPrice ||
+
+                item.price ||
+
+                0
+            )
+
+        const amount =
+            Number(
+
+                item.itemTotal ??
+
+                (
+                    quantity *
+                    rate
+                )
+            )
+
+        const variant =
+            item.variant
+
+                ? `
+
+<div class="invoice-item-extra">
+
+Variant:
+${item.variant}
+
+</div>
+
+`
+
+                : ""
+
+        const addons =
+            Array.isArray(
+                item.addons
+            )
+
+            &&
+
+            item.addons.length > 0
+
+                ? `
+
+<div class="invoice-item-extra">
+
+Add-ons:
+
+${
+
+    item.addons
+
+        .map(addon =>
+
+            `${
+
+                addon.name ||
+                "Addon"
+
+            } (+₹${
+
+                money(
+                    addon.price || 0
+                )
+
+            })`
+        )
+
+        .join(", ")
+
+}
+
+</div>
+
+`
+
+                : ""
+
+        return `
+
+<tr>
+
+<td>
+
+<strong>
+${item.name || "Item"}
+</strong>
+
+${variant}
+
+${addons}
+
+</td>
+
+<td>
+${quantity}
+</td>
+
+<td>
+₹${money(rate)}
+</td>
+
+<td>
+₹${money(amount)}
+</td>
+
+</tr>
+
+`
+
+    }).join("")
+}
+
+function invoiceAmountRow(
+    label,
+    amount,
+    subtract = false
+) {
+
+    if (
+        Number(amount || 0) === 0
+    ) {
+
+        return ""
+    }
+
+    return `
+
+<div class="invoice-total-row">
+
+<span>
+${label}
+</span>
+
+<strong>
+${subtract ? "- " : ""}₹${money(amount)}
+</strong>
+
+</div>
+
+`
+}
+
+function money(value) {
+
+    return Number(
+        value || 0
+    ).toFixed(2)
+}
 // DATE
 
 function formatDate(timestamp) {
