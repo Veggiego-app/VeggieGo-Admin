@@ -232,7 +232,7 @@ Zone
 <div class="dashboard-card">
 
 <h2>
-${r.commissionPercent || 30}%
+${r.commissionPercent ?? "Not Set"}${r.commissionPercent !== undefined && r.commissionPercent !== null && r.commissionPercent !== "" ? "%" : ""}
 </h2>
 
 <p>
@@ -501,7 +501,7 @@ Commission %
 <input
 type="number"
 id="businessCommission"
-value="${r.commissionPercent || 25}"
+value="${r.commissionPercent ?? ""}"
 >
 
 <br><br>
@@ -1124,19 +1124,29 @@ e.target.id ===
 
 ){
 
+const input =
+    document.getElementById(
+        "commissionPercent"
+    )
+
+if (!input) return
+
 const commissionPercent =
+    Number(input.value)
 
-parseFloat(
+if (
+    input.value.trim() === "" ||
+    !Number.isFinite(commissionPercent) ||
+    commissionPercent < 0 ||
+    commissionPercent > 100
+) {
 
-document.getElementById(
-"commissionPercent"
-).value
+    alert(
+        "Valid commission percentage enter karo (0 se 100)"
+    )
 
-)
-
-||
-
-30
+    return
+}
 
 await updateDoc(
 
@@ -1247,27 +1257,58 @@ e.target.id ===
 
 ){
 
+const commissionInput =
+    document.getElementById(
+        "businessCommission"
+    )
+
+const packagingInput =
+    document.getElementById(
+        "packagingFee"
+    )
+
+const commissionPercent =
+    Number(commissionInput.value)
+
+const packagingFee =
+    Number(packagingInput.value)
+
+if (
+    commissionInput.value.trim() === "" ||
+    !Number.isFinite(commissionPercent) ||
+    commissionPercent < 0 ||
+    commissionPercent > 100
+) {
+
+    alert(
+        "Valid commission percentage enter karo (0 se 100)"
+    )
+
+    return
+}
+
+if (
+    packagingInput.value.trim() === "" ||
+    !Number.isFinite(packagingFee) ||
+    packagingFee < 0
+) {
+
+    alert(
+        "Valid packaging fee enter karo"
+    )
+
+    return
+}
+
 await updateDoc(
 
 ref,
 
 {
 
-commissionPercent:
+commissionPercent,
 
-parseFloat(
-document.getElementById(
-"businessCommission"
-).value
-) || 25,
-
-packagingFee:
-
-parseFloat(
-document.getElementById(
-"packagingFee"
-).value
-) || 0
+packagingFee
 
 }
 

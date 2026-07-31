@@ -444,45 +444,1440 @@ const editAddVariantBtn =
 let editingItemId = null
 const storage =
     getStorage()
-    excelFile.addEventListener(
-    "change",
-    async (e) => {
 
-        const file =
-            e.target.files[0]
+let pendingExcelRows = []
+let pendingExcelPreview = null
 
-        if (!file) return
+function normalizeMenuText(value) {
 
-        const data =
-            await file.arrayBuffer()
+    return String(
+        value ?? ""
+    )
+    .trim()
+    .replace(
+        /\s+/g,
+        " "
+    )
+}
 
-        const workbook =
-            XLSX.read(data)
+function getMenuDuplicateKey(
+    categoryName,
+    subCategoryName,
+    itemName
+) {
 
-        const sheet =
-            workbook.Sheets[
-                workbook.SheetNames[0]
-            ]
+    return [
+        normalizeMenuText(
+            categoryName
+        ).toLowerCase(),
 
-        const rows =
-            XLSX.utils.sheet_to_json(
-                sheet
+        normalizeMenuText(
+            subCategoryName
+        ).toLowerCase(),
+
+        normalizeMenuText(
+            itemName
+        ).toLowerCase()
+    ].join("|||")
+}
+
+function escapeExcelPreviewHtml(value) {
+
+    return String(
+        value ?? ""
+    ).replace(
+        /[&<>"']/g,
+        (character) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        })[character]
+    )
+}
+
+function formatExcelFileSize(bytes) {
+
+    if (
+        !Number.isFinite(bytes)
+    ) return ""
+
+    if (
+        bytes < 1024
+    ) {
+
+        return `${bytes} B`
+    }
+
+    if (
+        bytes < 1024 * 1024
+    ) {
+
+        return `${
+            (bytes / 1024)
+                .toFixed(1)
+        } KB`
+    }
+
+    return `${
+        (
+            bytes /
+            (1024 * 1024)
+        ).toFixed(1)
+    } MB`
+}
+
+async function loadExistingMenuIndex() {
+
+    const [
+        categorySnapshot,
+        subCategorySnapshot,
+        menuSnapshot
+    ] = await Promise.all([
+
+        getDocs(
+            collection(
+                db,
+                "restaurants",
+                restaurantId,
+                "categories"
+            )
+        ),
+
+        getDocs(
+            collection(
+                db,
+                "restaurants",
+                restaurantId,
+                "subcategories"
+            )
+        ),
+
+        getDocs(
+            collection(
+                db,
+                "restaurants",
+                restaurantId,
+                "menu"
+            )
+        )
+    ])
+
+    const categoryNamesById =
+        new Map()
+
+    categorySnapshot.forEach(
+        (categoryDocument) => {
+
+            categoryNamesById.set(
+                categoryDocument.id,
+                normalizeMenuText(
+                    categoryDocument
+                        .data()
+                        .name
+                )
+            )
+        }
+    )
+
+    const subCategoryNamesById =
+        new Map()
+
+    subCategorySnapshot.forEach(
+        (subCategoryDocument) => {
+
+            subCategoryNamesById.set(
+                subCategoryDocument.id,
+                normalizeMenuText(
+                    subCategoryDocument
+                        .data()
+                        .name
+                )
+            )
+        }
+    )
+
+    const existingItemKeys =
+        new Map()
+
+    menuSnapshot.forEach(
+        (menuDocument) => {
+
+            const item =
+                menuDocument.data()
+
+            const categoryName =
+                normalizeMenuText(
+                    categoryNamesById.get(
+                        item.categoryId
+                    ) ||
+                    item.categoryName
+                )
+
+            const subCategoryName =
+                normalizeMenuText(
+                    subCategoryNamesById.get(
+                        item.subCategoryId
+                    ) ||
+                    item.subCategoryName
+                )
+
+            const itemName =
+                normalizeMenuText(
+                    item.name
+                )
+
+            if (
+                !categoryName ||
+                !subCategoryName ||
+                !itemName
+            ) return
+
+            existingItemKeys.set(
+                getMenuDuplicateKey(
+                    categoryName,
+                    subCategoryName,
+                    itemName
+                ),
+                {
+                    categoryName,
+                    subCategoryName,
+                    itemName
+                }
+            )
+        }
+    )
+
+    return {
+        categorySnapshot,
+        subCategorySnapshot,
+        menuSnapshot,
+        categoryNamesById,
+        subCategoryNamesById,
+        existingItemKeys
+    }
+}
+
+function ensureExcelPreviewModal() {
+
+    if (
+        document.getElementById(
+            "excelPreviewModal"
+        )
+    ) return
+
+    const style =
+        document.createElement(
+            "style"
+        )
+
+    style.id =
+        "excelPreviewStyles"
+
+    style.textContent = `
+        #excelPreviewModal {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(15, 23, 42, 0.68);
+        }
+
+        #excelPreviewModal.open {
+            display: flex;
+        }
+
+        .excel-preview-panel {
+            width: min(980px, 100%);
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+        }
+
+        .excel-preview-header {
+            padding: 20px 22px 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .excel-preview-title {
+            margin: 0;
+            color: #0f172a;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .excel-preview-file {
+            margin-top: 8px;
+            color: #334155;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+        .excel-preview-file strong {
+            color: #0f172a;
+        }
+
+        .excel-preview-body {
+            overflow-y: auto;
+            padding: 18px 22px;
+        }
+
+        .excel-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(115px, 1fr));
+            gap: 10px;
+        }
+
+        .excel-summary-card {
+            padding: 14px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .excel-summary-card strong {
+            display: block;
+            color: #0f172a;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .excel-summary-card span {
+            display: block;
+            margin-top: 7px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .excel-summary-card.uploadable {
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
+
+        .excel-summary-card.duplicate {
+            border-color: #fcd34d;
+            background: #fffbeb;
+        }
+
+        .excel-summary-card.invalid {
+            border-color: #fca5a5;
+            background: #fef2f2;
+        }
+
+        .excel-preview-section {
+            margin-top: 20px;
+        }
+
+        .excel-preview-section h4 {
+            margin: 0 0 10px;
+            color: #0f172a;
+            font-size: 15px;
+        }
+
+        .excel-table-wrap {
+            max-height: 245px;
+            overflow: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }
+
+        .excel-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #334155;
+            font-size: 13px;
+        }
+
+        .excel-preview-table th,
+        .excel-preview-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .excel-preview-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            color: #475569;
+            background: #f8fafc;
+            font-size: 12px;
+        }
+
+        .excel-preview-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        #excelPreviewModal .excel-preview-table tbody tr:hover > td {
+    color: #0f172a !important;
+    background: #eff6ff !important;
+}
+
+#excelPreviewModal .excel-preview-table tbody tr:hover > td.excel-duplicate-source {
+    color: #b45309 !important;
+}
+
+#excelPreviewModal .excel-preview-table tbody tr:hover > td.excel-invalid-reason {
+    color: #dc2626 !important;
+}
+
+        .excel-duplicate-source {
+            color: #b45309;
+            font-weight: 700;
+        }
+
+        .excel-invalid-reason {
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        .excel-import-progress {
+            display: none;
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #eff6ff;
+        }
+
+        .excel-import-progress.show {
+            display: block;
+        }
+
+        .excel-progress-text {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 9px;
+            color: #1e3a8a;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .excel-progress-track {
+            height: 9px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #bfdbfe;
+        }
+
+        .excel-progress-bar {
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: #2563eb;
+            transition: width 0.2s ease;
+        }
+
+        .excel-preview-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 15px 22px;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+        }
+
+        .excel-preview-btn {
+            min-height: 42px;
+            padding: 10px 16px;
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .excel-preview-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
+        .excel-preview-btn.secondary {
+            color: #334155;
+            background: #e2e8f0;
+        }
+
+        .excel-preview-btn.cancel {
+            color: #b91c1c;
+            background: #fee2e2;
+        }
+
+        .excel-preview-btn.confirm {
+            color: #ffffff;
+            background: #16a34a;
+        }
+
+        @media (max-width: 820px) {
+            .excel-summary-grid {
+                grid-template-columns: repeat(2, minmax(120px, 1fr));
+            }
+
+            .excel-preview-footer {
+                flex-wrap: wrap;
+            }
+
+            .excel-preview-btn {
+                flex: 1 1 180px;
+            }
+        }
+    `
+
+    document.head.appendChild(
+        style
+    )
+
+    const modal =
+        document.createElement(
+            "div"
+        )
+
+    modal.id =
+        "excelPreviewModal"
+
+    modal.innerHTML = `
+        <div
+            class="excel-preview-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="excelPreviewTitle"
+        >
+            <div class="excel-preview-header">
+                <h3
+                    id="excelPreviewTitle"
+                    class="excel-preview-title"
+                >
+                    Excel Menu Preview
+                </h3>
+
+                <div class="excel-preview-file">
+                    File:
+                    <strong id="excelPreviewFileName">-</strong>
+                    <span id="excelPreviewFileMeta"></span>
+                </div>
+            </div>
+
+            <div class="excel-preview-body">
+                <div class="excel-summary-grid">
+                    <div class="excel-summary-card">
+                        <strong id="excelPreviewCategories">0</strong>
+                        <span>Categories</span>
+                    </div>
+
+                    <div class="excel-summary-card">
+                        <strong id="excelPreviewSubCategories">0</strong>
+                        <span>Sub Categories</span>
+                    </div>
+
+                    <div class="excel-summary-card">
+                        <strong id="excelPreviewTotalItems">0</strong>
+                        <span>Total Items</span>
+                    </div>
+
+                    <div class="excel-summary-card uploadable">
+                        <strong id="excelPreviewUploadableItems">0</strong>
+                        <span>Items Upload होंगे</span>
+                    </div>
+
+                    <div class="excel-summary-card duplicate">
+                        <strong id="excelPreviewDuplicateItems">0</strong>
+                        <span>Duplicate Items</span>
+                    </div>
+
+                    <div class="excel-summary-card invalid">
+                        <strong id="excelPreviewInvalidRows">0</strong>
+                        <span>Invalid Rows</span>
+                    </div>
+                </div>
+
+                <div class="excel-preview-section">
+                    <h4>Category-wise Summary</h4>
+
+                    <div class="excel-table-wrap">
+                        <table class="excel-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Sub Categories</th>
+                                    <th>Items</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="excelCategorySummaryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div
+                    id="excelDuplicateSection"
+                    class="excel-preview-section"
+                    style="display:none"
+                >
+                    <h4>
+                        Duplicate Items —
+                        ये upload नहीं होंगे
+                    </h4>
+
+                    <div class="excel-table-wrap">
+                        <table class="excel-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Excel Row</th>
+                                    <th>Category</th>
+                                    <th>Sub Category</th>
+                                    <th>Item Name</th>
+                                    <th>Duplicate कहाँ है</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="excelDuplicateBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div
+                    id="excelInvalidSection"
+                    class="excel-preview-section"
+                    style="display:none"
+                >
+                    <h4>
+                        Invalid Rows —
+                        ये upload नहीं होंगी
+                    </h4>
+
+                    <div class="excel-table-wrap">
+                        <table class="excel-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Excel Row</th>
+                                    <th>Category</th>
+                                    <th>Sub Category</th>
+                                    <th>Item Name</th>
+                                    <th>Problem</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="excelInvalidBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div
+                    id="excelImportProgress"
+                    class="excel-import-progress"
+                >
+                    <div class="excel-progress-text">
+                        <span>Uploading Menu...</span>
+                        <span id="excelImportProgressText">0 / 0</span>
+                    </div>
+
+                    <div class="excel-progress-track">
+                        <div
+                            id="excelImportProgressBar"
+                            class="excel-progress-bar"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="excel-preview-footer">
+                <button
+                    type="button"
+                    id="chooseAnotherExcelBtn"
+                    class="excel-preview-btn secondary"
+                >
+                    Choose Another File
+                </button>
+
+                <button
+                    type="button"
+                    id="cancelExcelUploadBtn"
+                    class="excel-preview-btn cancel"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    id="confirmExcelUploadBtn"
+                    class="excel-preview-btn confirm"
+                >
+                    Confirm Upload
+                </button>
+            </div>
+        </div>
+    `
+
+    document.body.appendChild(
+        modal
+    )
+
+    document
+        .getElementById(
+            "chooseAnotherExcelBtn"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                closeExcelPreview()
+
+                excelFile.click()
+            }
+        )
+
+    document
+        .getElementById(
+            "cancelExcelUploadBtn"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                closeExcelPreview()
+            }
+        )
+
+    document
+        .getElementById(
+            "confirmExcelUploadBtn"
+        )
+        .addEventListener(
+            "click",
+            confirmExcelMenuUpload
+        )
+}
+
+function closeExcelPreview() {
+
+    document
+        .getElementById(
+            "excelPreviewModal"
+        )
+        ?.classList
+        .remove("open")
+
+    pendingExcelRows = []
+    pendingExcelPreview = null
+
+    if (excelFile) {
+
+        excelFile.value = ""
+    }
+}
+
+function renderExcelPreview(
+    preview,
+    file
+) {
+
+    ensureExcelPreviewModal()
+
+    document
+        .getElementById(
+            "excelPreviewFileName"
+        )
+        .textContent =
+            file.name
+
+    document
+        .getElementById(
+            "excelPreviewFileMeta"
+        )
+        .textContent =
+            ` (${formatExcelFileSize(
+                file.size
+            )})`
+
+    document
+        .getElementById(
+            "excelPreviewCategories"
+        )
+        .textContent =
+            preview.categorySummary.length
+
+    document
+        .getElementById(
+            "excelPreviewSubCategories"
+        )
+        .textContent =
+            preview.totalSubCategories
+
+    document
+        .getElementById(
+            "excelPreviewTotalItems"
+        )
+        .textContent =
+            preview.totalItems
+
+    document
+        .getElementById(
+            "excelPreviewUploadableItems"
+        )
+        .textContent =
+            preview.uploadRows.length
+
+    document
+        .getElementById(
+            "excelPreviewDuplicateItems"
+        )
+        .textContent =
+            preview.duplicates.length
+
+    document
+        .getElementById(
+            "excelPreviewInvalidRows"
+        )
+        .textContent =
+            preview.invalidRows.length
+
+    const categorySummaryBody =
+        document.getElementById(
+            "excelCategorySummaryBody"
+        )
+
+    categorySummaryBody.innerHTML =
+        preview.categorySummary.length
+
+        ?
+
+        preview.categorySummary
+            .map(
+                (category) => `
+                    <tr>
+                        <td>
+                            ${escapeExcelPreviewHtml(
+                                category.name
+                            )}
+                        </td>
+                        <td>
+                            ${category.subCategoryCount}
+                        </td>
+                        <td>
+                            ${category.itemCount}
+                        </td>
+                    </tr>
+                `
+            )
+            .join("")
+
+        :
+
+        `
+            <tr>
+                <td colspan="3">
+                    कोई valid menu data नहीं मिला।
+                </td>
+            </tr>
+        `
+
+    const duplicateSection =
+        document.getElementById(
+            "excelDuplicateSection"
+        )
+
+    duplicateSection.style.display =
+        preview.duplicates.length
+            ? "block"
+            : "none"
+
+    document
+        .getElementById(
+            "excelDuplicateBody"
+        )
+        .innerHTML =
+            preview.duplicates
+                .map(
+                    (duplicate) => `
+                        <tr>
+                            <td>${duplicate.rowNumber}</td>
+                            <td>
+                                ${escapeExcelPreviewHtml(
+                                    duplicate.categoryName
+                                )}
+                            </td>
+                            <td>
+                                ${escapeExcelPreviewHtml(
+                                    duplicate.subCategoryName
+                                )}
+                            </td>
+                            <td>
+                                ${escapeExcelPreviewHtml(
+                                    duplicate.itemName
+                                )}
+                            </td>
+                            <td class="excel-duplicate-source">
+                                ${escapeExcelPreviewHtml(
+                                    duplicate.source
+                                )}
+                            </td>
+                        </tr>
+                    `
+                )
+                .join("")
+
+    const invalidSection =
+        document.getElementById(
+            "excelInvalidSection"
+        )
+
+    invalidSection.style.display =
+        preview.invalidRows.length
+            ? "block"
+            : "none"
+
+    document
+        .getElementById(
+            "excelInvalidBody"
+        )
+        .innerHTML =
+            preview.invalidRows
+                .map(
+                    (invalidRow) => `
+                        <tr>
+                            <td>${invalidRow.rowNumber}</td>
+                            <td>
+                                ${escapeExcelPreviewHtml(
+                                    invalidRow.categoryName ||
+                                    "-"
+                                )}
+                            </td>
+                            <td>
+                                ${escapeExcelPreviewHtml(
+                                    invalidRow.subCategoryName ||
+                                    "-"
+                                )}
+                            </td>
+                            <td>
+                                ${escapeExcelPreviewHtml(
+                                    invalidRow.itemName ||
+                                    "-"
+                                )}
+                            </td>
+                            <td class="excel-invalid-reason">
+                                ${escapeExcelPreviewHtml(
+                                    invalidRow.reason
+                                )}
+                            </td>
+                        </tr>
+                    `
+                )
+                .join("")
+
+    const confirmButton =
+        document.getElementById(
+            "confirmExcelUploadBtn"
+        )
+
+    confirmButton.disabled =
+        preview.uploadRows.length === 0
+
+    confirmButton.textContent =
+        preview.uploadRows.length
+
+        ?
+
+        `Confirm Upload (${
+            preview.uploadRows.length
+        } Items)`
+
+        :
+
+        "No Items To Upload"
+
+    document
+        .getElementById(
+            "excelImportProgress"
+        )
+        .classList
+        .remove("show")
+
+    document
+        .getElementById(
+            "excelImportProgressBar"
+        )
+        .style.width = "0%"
+
+    document
+        .getElementById(
+            "excelPreviewModal"
+        )
+        .classList
+        .add("open")
+}
+
+async function buildExcelPreview(
+    rows
+) {
+
+    const existingIndex =
+        await loadExistingMenuIndex()
+
+    const seenExcelItems =
+        new Map()
+
+    const categorySummaryMap =
+        new Map()
+
+    const uploadRows = []
+    const duplicates = []
+    const invalidRows = []
+
+    rows.forEach(
+        (originalRow, index) => {
+
+            const rowNumber =
+                index + 2
+
+            const categoryName =
+                normalizeMenuText(
+                    originalRow.Category
+                )
+
+            const subCategoryName =
+                normalizeMenuText(
+                    originalRow[
+                        "Sub Category"
+                    ]
+                )
+
+            const itemName =
+                normalizeMenuText(
+                    originalRow[
+                        "Item Name"
+                    ]
+                )
+
+            const missingColumns = []
+
+            if (!categoryName) {
+
+                missingColumns.push(
+                    "Category"
+                )
+            }
+
+            if (!subCategoryName) {
+
+                missingColumns.push(
+                    "Sub Category"
+                )
+            }
+
+            if (!itemName) {
+
+                missingColumns.push(
+                    "Item Name"
+                )
+            }
+
+            if (
+                missingColumns.length
+            ) {
+
+                invalidRows.push({
+                    rowNumber,
+                    categoryName,
+                    subCategoryName,
+                    itemName,
+                    reason:
+                        `${
+                            missingColumns.join(", ")
+                        } missing है`
+                })
+
+                return
+            }
+
+            const categoryKey =
+                categoryName.toLowerCase()
+
+            if (
+                !categorySummaryMap.has(
+                    categoryKey
+                )
+            ) {
+
+                categorySummaryMap.set(
+                    categoryKey,
+                    {
+                        name: categoryName,
+                        subCategories:
+                            new Set(),
+                        itemCount: 0
+                    }
+                )
+            }
+
+            const categorySummary =
+                categorySummaryMap.get(
+                    categoryKey
+                )
+
+            categorySummary
+                .subCategories
+                .add(
+                    subCategoryName
+                        .toLowerCase()
+                )
+
+            categorySummary.itemCount += 1
+
+            const duplicateKey =
+                getMenuDuplicateKey(
+                    categoryName,
+                    subCategoryName,
+                    itemName
+                )
+
+            if (
+                existingIndex
+                    .existingItemKeys
+                    .has(duplicateKey)
+            ) {
+
+                duplicates.push({
+                    rowNumber,
+                    categoryName,
+                    subCategoryName,
+                    itemName,
+                    source:
+                        "Existing menu में पहले से मौजूद"
+                })
+
+                return
+            }
+
+            if (
+                seenExcelItems.has(
+                    duplicateKey
+                )
+            ) {
+
+                duplicates.push({
+                    rowNumber,
+                    categoryName,
+                    subCategoryName,
+                    itemName,
+                    source:
+                        `इसी Excel की Row ${
+                            seenExcelItems.get(
+                                duplicateKey
+                            )
+                        } में मौजूद`
+                })
+
+                return
+            }
+
+            seenExcelItems.set(
+                duplicateKey,
+                rowNumber
             )
 
-        console.log(rows)
-        await uploadMenuRows(
-    rows
-)
+            uploadRows.push({
+                ...originalRow,
+                Category:
+                    categoryName,
+                "Sub Category":
+                    subCategoryName,
+                "Item Name":
+                    itemName
+            })
+        }
+    )
 
-alert(
-    "Menu Uploaded Successfully 😎🔥"
-)
+    const categorySummary =
+        Array.from(
+            categorySummaryMap.values()
+        )
+        .map(
+            (category) => ({
+                name:
+                    category.name,
+                subCategoryCount:
+                    category
+                        .subCategories
+                        .size,
+                itemCount:
+                    category.itemCount
+            })
+        )
+
+    const totalSubCategories =
+        categorySummary.reduce(
+            (
+                total,
+                category
+            ) =>
+                total +
+                category
+                    .subCategoryCount,
+            0
+        )
+
+    return {
+        totalRows:
+            rows.length,
+        totalItems:
+            rows.length -
+            invalidRows.length,
+        categorySummary,
+        totalSubCategories,
+        uploadRows,
+        duplicates,
+        invalidRows
+    }
+}
+
+async function confirmExcelMenuUpload() {
+
+    if (
+        !pendingExcelRows.length ||
+        !pendingExcelPreview
+    ) return
+
+    const confirmButton =
+        document.getElementById(
+            "confirmExcelUploadBtn"
+        )
+
+    const cancelButton =
+        document.getElementById(
+            "cancelExcelUploadBtn"
+        )
+
+    const chooseButton =
+        document.getElementById(
+            "chooseAnotherExcelBtn"
+        )
+
+    const progress =
+        document.getElementById(
+            "excelImportProgress"
+        )
+
+    const progressText =
+        document.getElementById(
+            "excelImportProgressText"
+        )
+
+    const progressBar =
+        document.getElementById(
+            "excelImportProgressBar"
+        )
+
+    confirmButton.disabled = true
+    cancelButton.disabled = true
+    chooseButton.disabled = true
+
+    confirmButton.textContent =
+        "Uploading..."
+
+    progress
+        .classList
+        .add("show")
+
+    progressText.textContent =
+        `0 / ${pendingExcelRows.length}`
+
+    progressBar.style.width = "0%"
+
+    try {
+
+        const uploadResult =
+            await uploadMenuRows(
+                pendingExcelRows,
+                (completed, total) => {
+
+                    progressText.textContent =
+                        `${completed} / ${total}`
+
+                    progressBar.style.width =
+                        `${
+                            total
+                                ? (
+                                    completed /
+                                    total
+                                ) * 100
+                                : 0
+                        }%`
+                }
+            )
+
+        const duplicateCount =
+            pendingExcelPreview
+                .duplicates
+                .length +
+            uploadResult
+                .skippedDuplicates
+                .length
 
         alert(
-            `Rows Found: ${rows.length}`
+            `Menu Uploaded Successfully!\n\n` +
+            `Uploaded Items: ${
+                uploadResult.uploadedCount
+            }\n` +
+            `Duplicate Skipped: ${
+                duplicateCount
+            }\n` +
+            `Invalid Rows Skipped: ${
+                pendingExcelPreview
+                    .invalidRows
+                    .length
+            }`
         )
+
+        closeExcelPreview()
     }
-)
+
+    catch (error) {
+
+        console.error(
+            "Excel menu upload failed:",
+            error
+        )
+
+        alert(
+            "Menu upload पूरा नहीं हुआ। " +
+            "Internet check करके file को दोबारा select करें। " +
+            "जो items upload हो चुके हैं, वे duplicate check के कारण दोबारा नहीं बनेंगे।"
+        )
+
+        confirmButton.disabled = false
+        cancelButton.disabled = false
+        chooseButton.disabled = false
+
+        confirmButton.textContent =
+            `Retry Upload (${
+                pendingExcelRows.length
+            } Items)`
+    }
+}
+
+if (excelFile) {
+
+    excelFile.addEventListener(
+        "change",
+        async (event) => {
+
+            const file =
+                event.target.files[0]
+
+            if (!file) return
+
+            if (
+                !/\.(xlsx|xls)$/i
+                    .test(file.name)
+            ) {
+
+                alert(
+                    "Please select only .xlsx or .xls Excel file."
+                )
+
+                excelFile.value = ""
+
+                return
+            }
+
+            if (uploadExcelBtn) {
+
+                uploadExcelBtn.disabled =
+                    true
+            }
+
+            try {
+
+                const data =
+                    await file.arrayBuffer()
+
+                const workbook =
+                    XLSX.read(data)
+
+                if (
+                    !workbook
+                        .SheetNames
+                        .length
+                ) {
+
+                    throw new Error(
+                        "Excel sheet missing"
+                    )
+                }
+
+                const sheet =
+                    workbook.Sheets[
+                        workbook
+                            .SheetNames[0]
+                    ]
+
+                const rows =
+                    XLSX.utils
+                        .sheet_to_json(
+                            sheet,
+                            {
+                                defval: ""
+                            }
+                        )
+
+                if (!rows.length) {
+
+                    throw new Error(
+                        "Excel file is empty"
+                    )
+                }
+
+                const preview =
+                    await buildExcelPreview(
+                        rows
+                    )
+
+                pendingExcelRows =
+                    preview.uploadRows
+
+                pendingExcelPreview =
+                    preview
+
+                renderExcelPreview(
+                    preview,
+                    file
+                )
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Excel preview failed:",
+                    error
+                )
+
+                alert(
+                    "Excel file read नहीं हुई। सही menu Excel file select करें।"
+                )
+
+                excelFile.value = ""
+            }
+
+            finally {
+
+                if (uploadExcelBtn) {
+
+                    uploadExcelBtn.disabled =
+                        false
+                }
+            }
+        }
+    )
+}
 
 const totalItems =
     document.getElementById(
@@ -532,6 +1927,11 @@ const categoryAvailable =
     document.getElementById(
         "categoryAvailable"
     )
+
+const categoryVisible =
+    document.getElementById(
+        "categoryVisible"
+    )
     const subCategoryTimingModal =
     document.getElementById(
         "subCategoryTimingModal"
@@ -561,6 +1961,11 @@ const subCategoryAutoHide =
 const subCategoryAvailable =
     document.getElementById(
         "subCategoryAvailable"
+    )
+
+const subCategoryVisible =
+    document.getElementById(
+        "subCategoryVisible"
     )
 
     let sortableInstance = null
@@ -777,801 +2182,572 @@ onSnapshot(
     }
 )
 
-// 🔥 RENDER CATEGORIES
+// 🔥 RENDER CATEGORY TREE
 
 function renderCategories() {
 
     categoriesContainer.innerHTML = ""
 
     categories.forEach((category) => {
-        const hiddenBadge =
 
-    category.visible === false
-
-    ?
-
-    `
-    <div class="
-    category-status
-    off-status
-    ">
-
-    🙈 Hidden From Customers
-
-    </div>
-    `
-
-    :
-
-    ``
-        const div =
-            document.createElement("div")
-
-        div.className =
-            `category-card ${
-                selectedCategory === category.id
-                    ? "active"
-                    : ""
-            }`
-            div.dataset.id =
-    category.id
-
-      div.innerHTML = `
-
-<div class="category-header">
-
-<div>
-
-<div class="category-title">
-
-${category.name}
-
-</div>
-
-${
-category.timeSlots?.map(
-(slot) => `
-<div class="category-time-badge">
-
-⏰
-${slot.start}
--
-${slot.end}
-
-</div>
-`
-).join("") || ""
-}
-
-<button
-
-class="category-status ${
-    category.stockEnabled === false
-        ? "off-status"
-        : "live-status"
-}"
-
-onclick="
-event.stopPropagation();
-toggleCategoryStock(
-'${category.id}',
-${category.stockEnabled !== false}
-)
-"
-
->
-
-${
-    category.stockEnabled === false
-        ? "🔴 OUT OF STOCK"
-        : "🟢 IN STOCK"
-}
-
-</button>
-${hiddenBadge}
-
-</div>
-
-</div>
-
-<div class="category-actions">
-<button
-class="
-category-btn
-${category.visible !== false
-?
-'delete-category-btn'
-:
-'edit-category-btn'
-}
-"
-onclick="
-event.stopPropagation();
-toggleCategoryVisibility(
-'${category.id}',
-${category.visible !== false}
-)
-"
->
-
-${category.visible !== false
-?
-'🙈 Hide'
-:
-'👁 Show'
-}
-
-</button>
-
-
-<button
-class="
-category-btn
-edit-category-btn
-"
-onclick="
-event.stopPropagation();
-openCategoryEdit(
-'${category.id}'
-)
-"
->
-
-✏️ Edit
-
-</button>
-
-<button
-class="
-category-btn
-delete-category-btn
-"
-onclick="
-event.stopPropagation();
-deleteCategory(
-'${category.id}'
-)
-"
->
-
-❌ Delete
-
-</button>
-
-</div>
-
-`
-
-        div.onclick = () => {
-
-    selectedCategory =
-        category.id
-
-    const firstSubCategory =
-        subCategories.find(
-            sub =>
-                sub.categoryId === category.id
+        const categorySubs = subCategories.filter(
+            sub => sub.categoryId === category.id
         )
 
-    selectedSubCategory =
-        firstSubCategory
-            ? firstSubCategory.id
-            : null
+        const isActive = selectedCategory === category.id
 
-    renderCategories()
-    renderSubCategories()
-    renderItems()
-
-    document
-        .querySelector(".item-card")
-        ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        })
-}
-        categoriesContainer.appendChild(div)
-    })
-}
-
-// 🔥 RENDER SUB CATEGORIES
-
-function renderSubCategories() {
-
-    subCategoriesContainer.innerHTML = ""
-
-    const filtered =
-
-    selectedCategory
-
-    ?
-
-    subCategories.filter(
-        sub =>
-        sub.categoryId ===
-        selectedCategory
+        const categoryHasOwnTimeSlot =
+    Array.isArray(category.timeSlots) &&
+    category.timeSlots.some(
+        slot => slot?.start && slot?.end
     )
 
-    :
+const categoryHasSubTimeSlot =
+    categorySubs.some(
+        sub =>
+            Array.isArray(sub.timeSlots) &&
+            sub.timeSlots.some(
+                slot => slot?.start && slot?.end
+            )
+    )
 
-    subCategories
+const categoryHasSchedule =
+    categoryHasOwnTimeSlot ||
+    categoryHasSubTimeSlot
 
-    filtered.forEach((sub) => {
+        const wrapper = document.createElement("div")
+        wrapper.className = `category-tree-group ${isActive ? "active" : ""}`
+        wrapper.dataset.id = category.id
 
-        const div =
-            document.createElement("div")
+        wrapper.innerHTML = `
+            <div class="category-tree-row" data-category-id="${category.id}">
+                <button class="tree-chevron" type="button" aria-label="Expand category">
+                    ${isActive ? "▼" : "▶"}
+                </button>
 
-            div.dataset.id =
-    sub.id
+                <div class="tree-category-main">
+                    <strong class="tree-name-with-schedule">
+    ${escapeMenuHtml(category.name)}
 
-        div.className =
-            `subcategory-card ${
-                selectedSubCategory === sub.id
-                    ? "active"
-                    : ""
-            }`
+    ${
+        categoryHasSchedule
+            ? `
+                <span
+                    class="tree-clock-icon"
+                    title="${
+                        categoryHasOwnTimeSlot
+                            ? "Time slot added in this category"
+                            : "Time slot added in a subcategory"
+                    }"
+                >
+                    🕒
+                </span>
+            `
+            : ""
+    }
+</strong>
+                    <span>${categorySubs.length} subcategories</span>
+                </div>
 
-        div.innerHTML = `
+                <button
+                    class="tree-mini-status ${category.stockEnabled === false ? "off" : "on"}"
+                    type="button"
+                    onclick="event.stopPropagation();toggleCategoryStock('${category.id}', ${category.stockEnabled !== false})"
+                    title="Change stock"
+                >
+                    ${category.stockEnabled === false ? "Out" : "In"}
+                </button>
 
-<div class="category-header">
+                <button
+                    class="tree-icon-btn visibility ${category.visible === false ? "is-hidden" : ""}"
+                    type="button"
+                    onclick="event.stopPropagation();toggleCategoryVisibility('${category.id}', ${category.visible !== false})"
+                    title="${category.visible === false ? "Show" : "Hide"} category"
+                >${category.visible === false ? "👁" : "🙈"}</button>
 
-<div>
+                <button
+                    class="tree-icon-btn edit"
+                    type="button"
+                    onclick="event.stopPropagation();openCategoryEdit('${category.id}')"
+                    title="Edit category"
+                >✏️</button>
 
-<div
-style="
-font-size:12px;
-color:#9ca3af;
-margin-bottom:6px;
-"
->
+                <button
+                    class="tree-icon-btn delete"
+                    type="button"
+                    onclick="event.stopPropagation();deleteCategory('${category.id}')"
+                    title="Delete category"
+                >🗑️</button>
+            </div>
 
-📂 ${
-categories.find(
-c => c.id === sub.categoryId
-)?.name || ""
-}
+            <div class="tree-subcategory-list ${isActive ? "open" : ""}" data-category-id="${category.id}">
+                ${categorySubs.length ? categorySubs.map(sub => `
+                    <div
+                        class="subcategory-tree-row subcategory-card ${selectedSubCategory === sub.id ? "active" : ""}"
+                        data-id="${sub.id}"
+                        data-category-id="${category.id}"
+                    >
+                        <span class="tree-branch">└</span>
 
-</div>
+                        <div class="tree-sub-main">
+                            <strong class="tree-name-with-schedule">
+    ${escapeMenuHtml(sub.name)}
 
-<div class="category-title">
+    ${
+        Array.isArray(sub.timeSlots) &&
+        sub.timeSlots.some(
+            slot => slot?.start && slot?.end
+        )
+            ? `
+                <span
+                    class="tree-clock-icon"
+                    title="Time slot added in this subcategory"
+                >
+                    🕒
+                </span>
+            `
+            : ""
+    }
+</strong>
+                            <span>${sub.timeSlots?.length ? "Scheduled" : "Always"}</span>
+                        </div>
 
-<span style="
-font-size:17px;
-font-weight:800;
-color:white;
-">
-└ ${sub.name}
-</span>
+                        <button
+                            class="tree-mini-status ${sub.stockEnabled === false ? "off" : "on"}"
+                            type="button"
+                            onclick="event.stopPropagation();toggleSubCategoryStock('${sub.id}', ${sub.stockEnabled !== false})"
+                            title="Change stock"
+                        >${sub.stockEnabled === false ? "Out" : "In"}</button>
 
-</div>
+                        <button
+                            class="tree-icon-btn visibility ${sub.visible === false ? "is-hidden" : ""}"
+                            type="button"
+                            onclick="event.stopPropagation();toggleSubCategoryVisibility('${sub.id}', ${sub.visible !== false})"
+                            title="${sub.visible === false ? "Show" : "Hide"} subcategory"
+                        >${sub.visible === false ? "👁" : "🙈"}</button>
 
-<button
+                        <button
+                            class="tree-icon-btn edit"
+                            type="button"
+                            onclick="event.stopPropagation();editSubCategory('${sub.id}')"
+                            title="Edit subcategory"
+                        >✏️</button>
 
-class="category-status ${
-    sub.stockEnabled === false
-        ? "off-status"
-        : "live-status"
-}"
+                        <button
+                            class="tree-icon-btn delete"
+                            type="button"
+                            onclick="event.stopPropagation();deleteSubCategory('${sub.id}')"
+                            title="Delete subcategory"
+                        >🗑️</button>
+                    </div>
+                `).join("") : `
+                    <div class="tree-empty-sub">No subcategory</div>
+                `}
+            </div>
+        `
 
-onclick="
-event.stopPropagation();
-toggleSubCategoryStock(
-'${sub.id}',
-${sub.stockEnabled !== false}
-)
-"
+        const categoryRow = wrapper.querySelector(".category-tree-row")
+        categoryRow.onclick = () => {
+            if (selectedCategory === category.id) {
+                selectedCategory = null
+                selectedSubCategory = null
+            } else {
+                selectedCategory = category.id
+                selectedSubCategory = categorySubs[0]?.id || null
+            }
 
->
+            renderCategories()
+            renderItems()
+            initSubCategorySorting()
+        }
 
-${
-    sub.stockEnabled === false
-        ? "🔴 OUT OF STOCK"
-        : "🟢 IN STOCK"
-}
-
-</button>
-
-</div>
-
-</div>
-
-<div class="category-actions">
-
-<button
-class="
-category-btn
-${sub.visible !== false
-?
-'delete-category-btn'
-:
-'edit-category-btn'
-}
-"
-onclick="
-event.stopPropagation();
-toggleSubCategoryVisibility(
-'${sub.id}',
-${sub.visible !== false}
-)
-"
->
-
-${sub.visible !== false
-?
-'🙈 Hide'
-:
-'👁 Show'
-}
-
-</button>
-
-<button
-class="
-category-btn
-edit-category-btn
-"
-onclick="
-event.stopPropagation();
-editSubCategory(
-'${sub.id}'
-)
-"
->
-
-✏️ Edit
-
-</button>
-
-<button
-class="
-category-btn
-delete-category-btn
-"
-onclick="
-event.stopPropagation();
-deleteSubCategory(
-'${sub.id}'
-)
-"
->
-
-❌ Delete
-
-</button>
-
-</div>
-
-`
-
-        div.onclick = () => {
-
-    selectedSubCategory =
-        sub.id
-
-    renderSubCategories()
-    renderItems()
-
-    document
-        .querySelector(".item-card")
-        ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
+        wrapper.querySelectorAll(".subcategory-tree-row").forEach(row => {
+            row.onclick = () => {
+                selectedCategory = category.id
+                selectedSubCategory = row.dataset.id
+                renderCategories()
+                renderItems()
+                initSubCategorySorting()
+            }
         })
+
+        categoriesContainer.appendChild(wrapper)
+    })
 }
 
-        subCategoriesContainer.appendChild(div)
-    })
+// Subcategories are rendered inside the category tree.
+function renderSubCategories() {
+    renderCategories()
 }
 
 // 🔥 RENDER ITEMS
+let expandedMenuItemId = null
+
+function escapeMenuHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+}
+
+function getItemTimeSlots(item) {
+
+    if (Array.isArray(item.timeSlots) && item.timeSlots.length) {
+
+        return item.timeSlots.filter(
+            slot => slot?.start && slot?.end
+        )
+    }
+
+    if (item.startTime && item.endTime) {
+
+        return [{
+            start: item.startTime,
+            end: item.endTime
+        }]
+    }
+
+    return []
+}
+
+function getItemAddons(item) {
+
+    const possibleAddons =
+        item.addons ||
+        item.addOns ||
+        item.addon ||
+        []
+
+    return Array.isArray(possibleAddons)
+        ? possibleAddons
+        : []
+}
+
+window.toggleMenuItemDetails = (itemId) => {
+
+    expandedMenuItemId =
+        expandedMenuItemId === itemId
+            ? null
+            : itemId
+
+    renderItems()
+}
+
+// 🔥 RENDER ITEMS — COMPACT ROW + EXPAND DETAILS
 function renderItems() {
 
     itemsContainer.innerHTML = ""
 
     const keyword =
-    searchInput.value
-        .trim()
-        .toLowerCase()
+        searchInput.value
+            .trim()
+            .toLowerCase()
 
-if (!selectedSubCategory && keyword === "") {
+    if (!selectedSubCategory && keyword === "") {
 
-    itemsContainer.innerHTML = `
+        itemsContainer.innerHTML = `
+            <div class="menu-empty-state">
+                👈 Select Sub Category
+            </div>
+        `
 
-        <div style="
-            color:white;
-            font-size:22px;
-            text-align:center;
-            padding:80px;
-            width:100%;
-        ">
-            👈 Select Sub Category
-        </div>
-
-    `
-
-    return
-}
+        return
+    }
 
     const filtered =
-    menuItems.filter((item) => {
+        menuItems.filter((item) => {
 
-        const matchSubCategory =
+            const matchSubCategory =
+                keyword !== ""
+                    ? true
+                    : item.subCategoryId === selectedSubCategory
 
-            keyword !== ""
+            const matchSearch =
+                String(item.name || "")
+                    .toLowerCase()
+                    .includes(keyword)
 
-            ?
+            return matchSubCategory && matchSearch
+        })
 
-            true
-
-            :
-
-            item.subCategoryId ===
-            selectedSubCategory
-
-        const matchSearch =
-
-            item.name
-                .toLowerCase()
-                .includes(keyword)
-
-        return (
-
-            matchSubCategory &&
-            matchSearch
-
-        )
-
-    })
     if (filtered.length === 0) {
 
-    itemsContainer.innerHTML = `
+        itemsContainer.innerHTML = `
+            <div class="menu-empty-state muted">
+                🔍 No Item Found
+            </div>
+        `
 
-        <div style="
-            color:#9ca3af;
-            font-size:24px;
-            font-weight:bold;
-            text-align:center;
-            padding:80px;
-            width:100%;
-        ">
+        return
+    }
 
-            🔍 No Item Found
+    const tableHeader =
+        document.createElement("div")
 
-        </div>
+    tableHeader.className =
+        "menu-items-table-header"
 
+    tableHeader.innerHTML = `
+        <div>Photo</div>
+        <div>Item</div>
+        <div>Price</div>
+        <div>Variants</div>
+        <div>Stock</div>
+        <div>Visibility</div>
+        <div>Time</div>
+        <div>Tags</div>
+        <div>Actions</div>
     `
 
-    return
-}
+    itemsContainer.appendChild(tableHeader)
+
+    const rowsContainer =
+        document.createElement("div")
+
+    rowsContainer.className =
+        "menu-items-rows"
+
+    itemsContainer.appendChild(rowsContainer)
 
     filtered.forEach((item) => {
-        const now =
 
-    new Date()
+        const isExpanded =
+            expandedMenuItemId === item.id
 
-const currentTime =
+        const variants =
+            Array.isArray(item.variants)
+                ? item.variants
+                : []
 
-    now
-    .toTimeString()
-    .slice(0,5)
+        const addons =
+            getItemAddons(item)
 
-        const variantsHtml =
-            item.variants
-                ?.map(
+        const timeSlots =
+            getItemTimeSlots(item)
 
-                    (variant) => `
+        const variantsDetails =
+            variants.length
+                ? variants.map((variant) => `
+                    <div class="expanded-detail-line">
+                        <span>${escapeMenuHtml(variant.name || "Variant")}</span>
+                        <strong>₹${Number(variant.price || 0)}</strong>
+                    </div>
+                `).join("")
+                : `<div class="expanded-empty">No variants</div>`
 
-<div class="variant">
+        const addonsDetails =
+            addons.length
+                ? addons.map((addon) => `
+                    <div class="expanded-detail-line">
+                        <span>${escapeMenuHtml(addon.name || addon.title || "Addon")}</span>
+                        <strong>+₹${Number(addon.price || addon.amount || 0)}</strong>
+                    </div>
+                `).join("")
+                : `<div class="expanded-empty">No addons</div>`
 
-${variant.name}
-₹${variant.price}
+        const timeDetails =
+            timeSlots.length
+                ? timeSlots.map((slot) => `
+                    <div class="expanded-time-pill">
+                        ${escapeMenuHtml(slot.start)} - ${escapeMenuHtml(slot.end)}
+                    </div>
+                `).join("")
+                : `<div class="expanded-empty">Always Available</div>`
 
-</div>
+        const timeLabel =
+            timeSlots.length
+                ? "Scheduled"
+                : "Always"
 
-`
-                )
-                .join("")
+        const tagsHtml = `
+            ${item.bestseller
+                ? '<span class="row-tag bestseller">🔥 Best</span>'
+                : ''}
+            ${item.recommended
+                ? '<span class="row-tag recommended">⭐ Rec</span>'
+                : ''}
+            ${!item.bestseller && !item.recommended
+                ? '<span class="row-no-tag">—</span>'
+                : ''}
+        `
 
-        const div =
+        const group =
             document.createElement("div")
 
-        div.className =
-    "item-card"
+        group.className =
+            `menu-item-group ${isExpanded ? "expanded" : ""}`
 
-div.dataset.id =
-    item.id
+        group.dataset.id = item.id
 
-       div.innerHTML = `
+        group.innerHTML = `
+            <div
+                class="menu-item-row"
+                role="button"
+                tabindex="0"
+                aria-expanded="${isExpanded}"
+                onclick="toggleMenuItemDetails('${item.id}')"
+                onkeydown="if(event.key === 'Enter' || event.key === ' '){event.preventDefault();toggleMenuItemDetails('${item.id}')}"
+            >
+                <div class="row-photo-cell">
+                    <span class="row-expand-arrow">${isExpanded ? "▼" : "▶"}</span>
+                    <img
+                        src="${escapeMenuHtml(item.image || 'https://placehold.co/96x96?text=Veg') }"
+                        alt="${escapeMenuHtml(item.name || 'Menu item')}"
+                        class="row-item-image"
+                    >
+                </div>
 
-<img
-src="${item.image || 'https://placehold.co/600x400'}"
-class="item-image"
->
+                <div class="row-item-name-cell">
+                    <strong>${escapeMenuHtml(item.name || "Unnamed Item")}</strong>
+                    <span>Pure Veg</span>
+                </div>
 
-<div class="item-top">
+                <div class="row-price-cell">
+                    ₹${Number(item.price || 0)}
+                </div>
 
-<div>
+                <div class="row-variant-cell">
+                    ${variants.length}
+                </div>
 
-<h3>
-${item.name}
-</h3>
-<div
-style="
-margin-top:6px;
-font-size:13px;
-color:#9ca3af;
-line-height:1.5;
-"
->
+                <div class="row-control-cell">
+                    <button
+                        type="button"
+                        class="row-status-btn ${item.available !== false ? 'in-stock' : 'out-stock'}"
+                        onclick="event.stopPropagation(); toggleAvailability('${item.id}', ${item.available !== false})"
+                    >
+                        ${item.available !== false ? '🟢 In Stock' : '🔴 Out Stock'}
+                    </button>
+                </div>
 
-${item.description || ""}
+                <div class="row-control-cell">
+                    <button
+                        type="button"
+                        class="row-status-btn ${item.visible !== false ? 'visible' : 'hidden'}"
+                        onclick="event.stopPropagation(); toggleVisibility('${item.id}', ${item.visible !== false})"
+                    >
+                        ${item.visible !== false ? '👁 Visible' : '🙈 Hidden'}
+                    </button>
+                </div>
 
-</div>
+                <div class="row-time-cell">
+                    <span class="row-time-label ${timeSlots.length ? 'scheduled' : ''}">
+                        ${timeLabel}
+                    </span>
+                </div>
 
-<div
-style="
-margin-top:8px;
-font-size:20px;
-font-weight:bold;
-color:#22c55e;
-"
->
+                <div class="row-tags-cell">
+                    ${tagsHtml}
+                </div>
 
-₹${item.price || 0}
+                <div class="row-actions-cell">
+                    <button
+                        type="button"
+                        class="row-icon-btn edit"
+                        title="Edit Item"
+                        onclick="event.stopPropagation(); openEditItem('${item.id}')"
+                    >✏️</button>
 
-</div>
-<div
-style="
-display:flex;
-align-items:center;
-gap:6px;
-margin-top:4px;
-"
->
+                    <button
+                        type="button"
+                        class="row-icon-btn delete"
+                        title="Delete Item"
+                        onclick="event.stopPropagation(); deleteItem('${item.id}')"
+                    >🗑️</button>
+                </div>
+            </div>
 
-<span class="veg-badge"></span>
+            <div class="menu-item-expanded-details">
+                <div class="expanded-title-row">
+                    <div>
+                        <strong>${escapeMenuHtml(item.name || "Unnamed Item")}</strong>
+                        <span>₹${Number(item.price || 0)}</span>
+                    </div>
 
-<span>
-Pure Veg
-</span>
+                    <button
+                        type="button"
+                        class="collapse-details-btn"
+                        onclick="event.stopPropagation(); toggleMenuItemDetails('${item.id}')"
+                    >✕ Collapse</button>
+                </div>
 
-</div>
+                <div class="expanded-divider"></div>
 
-</div>
+                <div class="expanded-description-block">
+                    <h4>Description</h4>
+                    <p>${escapeMenuHtml(item.description || "No description")}</p>
+                </div>
 
-<div
-style="
-display:flex;
-flex-direction:column;
-gap:8px;
-align-items:flex-end;
-"
->
+                <div class="expanded-details-grid">
+                    <section>
+                        <h4>Variants</h4>
+                        ${variantsDetails}
+                    </section>
 
-<button
-class="
-${item.available
-?
-'available-toggle'
-:
-'stock-toggle'
-}
-"
-onclick="
-toggleAvailability(
-'${item.id}',
-${item.available}
-)
-"
->
+                    <section>
+                        <h4>Addons</h4>
+                        ${addonsDetails}
+                    </section>
 
-${item.available !== false
-?
-'🔴 Out Of Stock'
-:
-'🟢 Available'
-}
+                    <section>
+                        <h4>Time Slot</h4>
+                        ${timeDetails}
+                    </section>
+                </div>
+            </div>
+        `
 
-</button>
-
-<button
-class="
-${item.visible
-?
-'visible-toggle'
-:
-'hidden-toggle'
-}
-"
-onclick="
-toggleVisibility(
-'${item.id}',
-${item.visible}
-)
-"
->
-
-${item.visible !== false
-?
-'🙈 Hide'
-:
-'👁 Show'
-}
-
-</button>
-
-</div>
-
-</div>
-
-<div class="item-badges">
-
-${item.bestseller
-?
-`<span class="best-badge">🔥 Bestseller</span>`
-:
-``
-}
-
-${item.recommended
-?
-`<span class="recommended-badge">⭐ Recommended</span>`
-:
-``
-}
-
-${
-item.timeSlots?.length
-
-?
-
-item.timeSlots.map(
-(slot) => `
-<span class="time-badge">
-
-⏰
-${slot.start}
--
-${slot.end}
-
-</span>
-`
-).join("")
-
-:
-
-(
-
-item.startTime &&
-item.endTime
-
-?
-
-`
-<span class="time-badge">
-
-⏰
-${item.startTime}
--
-${item.endTime}
-
-</span>
-`
-
-:
-
-""
-
-)
-
-}
-
-</div>
-
-<div class="variant-box">
-
-${variantsHtml}
-
-</div>
-
-<div class="item-actions">
-
-<button
-class="edit-btn"
-onclick="
-openEditItem(
-'${item.id}'
-)
-"
->
-
-✏️ Edit
-
-</button>
-
-<button
-class="delete-btn"
-onclick="
-deleteItem(
-'${item.id}'
-)
-"
->
-
-❌ Delete
-
-</button>
-
-</div>
-
-`
-
-        itemsContainer.appendChild(div)
+        rowsContainer.appendChild(group)
     })
+
     if (sortableInstance) {
+        sortableInstance.destroy()
+    }
 
-    sortableInstance.destroy()
-}
+    sortableInstance =
+        new Sortable(
+            rowsContainer,
+            {
+                animation: 200,
+                draggable: ".menu-item-group",
+                handle: ".row-photo-cell, .row-item-name-cell",
+                ghostClass: "sortable-ghost",
+                delay: 100,
+                delayOnTouchOnly: true,
 
-sortableInstance =
-    new Sortable(
+                onEnd: async () => {
 
-        itemsContainer,
+                    const rows =
+                        rowsContainer.querySelectorAll(
+                            ".menu-item-group"
+                        )
 
-        {
+                    const batch =
+                        writeBatch(db)
 
-            animation: 200,
+                    rows.forEach((row, index) => {
 
-            ghostClass:
-                "sortable-ghost",
+                        batch.update(
+                            doc(
+                                db,
+                                "restaurants",
+                                restaurantId,
+                                "menu",
+                                row.dataset.id
+                            ),
+                            {
+                                sortOrder: (index + 1) * 1000
+                            }
+                        )
+                    })
 
-            delay: 100,
-
-            delayOnTouchOnly: true,
-
-            onEnd:
-            async () => {
-
-                const cards =
-
-                    document.querySelectorAll(
-                        ".item-card"
-                    )
-
-                for (
-
-                    let index = 0;
-
-                    index < cards.length;
-
-                    index++
-
-                ) {
-
-                    const id =
-
-                        cards[index]
-                        .dataset.id
-
-                    await updateDoc(
-
-                        doc(
-                            db,
-                            "restaurants",
-                            restaurantId,
-                            "menu",
-                            id
-                        ),
-
-                        {
-
-                            sortOrder:
-    (index + 1) * 1000
-                        }
-                    )
+                    await batch.commit()
                 }
             }
-        }
-    )
+        )
 }
 
 // 🔥 DASHBOARD
@@ -2189,6 +3365,17 @@ async (
 
     editingItemId =
         itemId
+        // Purane item ki selected photo reset
+editItemImage.value = ""
+
+editPreviewImage.src = ""
+
+editPreviewImage.style.display =
+    "none"
+
+currentEditImage = ""
+
+currentEditImagePath = ""
 
     const snap =
         await getDoc(
@@ -2323,8 +3510,8 @@ timeSlots.forEach((slot) => {
         }
     )
 
-    editItemModal.style.display =
-        "flex"
+   editItemModal.style.display =
+    "flex"
 }
 
 // 🔥 ADD EDIT VARIANT ROW
@@ -2583,26 +3770,59 @@ const file =
         )
 
         editItemModal.style.display =
-            "none"
+    "none"
 
-        alert(
-            "Item Updated 😎🔥"
-        )
+editItemImage.value = ""
+
+editPreviewImage.src = ""
+
+editPreviewImage.style.display =
+    "none"
+
+currentEditImage = ""
+
+currentEditImagePath = ""
+
+editingItemId = null
+
+alert(
+    "Item Updated 😎🔥"
+)
 
     } catch(error) {
 
-        console.log(error)
+    console.error(
+        "ITEM UPDATE FULL ERROR:",
+        error 
+    )
 
-        alert(
-            "Update Failed 😭"
+    alert(
+        "Update Failed: " +
+        (
+            error.message ||
+            "Unknown Error"
         )
-    }
+    )
+}
 }
 
 // 🔥 CLOSE EDIT MODAL
 
 closeEditItemBtn.onclick =
 () => {
+
+    editItemImage.value = ""
+
+    editPreviewImage.src = ""
+
+    editPreviewImage.style.display =
+        "none"
+
+    currentEditImage = ""
+
+    currentEditImagePath = ""
+
+    editingItemId = null
 
     editItemModal.style.display =
         "none"
@@ -2800,10 +4020,13 @@ async () => {
     })),
 
     autoHide:
-        categoryAutoHide.checked,
+        false,
 
     available:
         categoryAvailable.checked,
+
+    visible:
+        categoryVisible.checked,
 
     updatedAt:
         Date.now()
@@ -3004,76 +4227,79 @@ categorySlots.forEach((slot) => {
     categoryAvailable.checked =
         category.available !== false
 
-    categoryAutoHide.checked =
-        category.autoHide === true
+    categoryAutoHide.checked = false
+
+    categoryVisible.checked =
+        category.visible !== false
 }
 // 🚀 CATEGORY SORTING
 
 function initCategorySorting() {
 
     if (categorySortable) {
-
         categorySortable.destroy()
     }
 
-    categorySortable =
-        new Sortable(
+    categorySortable = new Sortable(
+        categoriesContainer,
+        {
+            animation: 200,
+            ghostClass: "sortable-ghost",
+            handle: ".category-tree-row",
+            draggable: ".category-tree-group",
+            delay: 100,
+            delayOnTouchOnly: true,
+            onEnd: async () => {
+                const groups = document.querySelectorAll(".category-tree-group")
+                const batch = writeBatch(db)
 
-            categoriesContainer,
+                groups.forEach((group, index) => {
+                    batch.update(
+                        doc(db, "restaurants", restaurantId, "categories", group.dataset.id),
+                        { sortOrder: (index + 1) * 1000 }
+                    )
+                })
 
-            {
-
-                animation: 200,
-
-                ghostClass:
-                    "sortable-ghost",
-
-                delay: 100,
-
-                delayOnTouchOnly: true,
-
-                onEnd: async () => {
-
-    await updateCategorySortOrder();
-
-}
+                await batch.commit()
             }
-        )
+        }
+    )
 }
+
+let subCategorySortables = []
 
 function initSubCategorySorting() {
 
-    if (subCategorySortable) {
+    subCategorySortables.forEach(instance => instance.destroy())
+    subCategorySortables = []
 
-        subCategorySortable.destroy()
-
-    }
-
-    subCategorySortable = new Sortable(
-
-        subCategoriesContainer,
-
-        {
-
+    document.querySelectorAll(".tree-subcategory-list").forEach(list => {
+        const sortable = new Sortable(list, {
             animation: 200,
-
             ghostClass: "sortable-ghost",
-
+            draggable: ".subcategory-tree-row",
+            handle: ".tree-sub-main",
             delay: 100,
-
             delayOnTouchOnly: true,
-
             onEnd: async () => {
+                const rows = list.querySelectorAll(".subcategory-tree-row")
+                const batch = writeBatch(db)
 
-                await updateSubCategorySortOrder()
+                rows.forEach((row, index) => {
+                    batch.update(
+                        doc(db, "restaurants", restaurantId, "subcategories", row.dataset.id),
+                        { sortOrder: (index + 1) * 1000 }
+                    )
+                })
 
+                await batch.commit()
             }
+        })
 
-        }
-
-    )
-
+        subCategorySortables.push(sortable)
+    })
 }
+
 // 🚀 CATEGORY VISIBILITY
 
 window.toggleCategoryVisibility =
@@ -3087,8 +4313,7 @@ async (
         const newVisible =
             !currentValue
 
-        // ✅ Category Update
-
+        // CATEGORY UPDATE
         await updateDoc(
 
             doc(
@@ -3100,19 +4325,16 @@ async (
             ),
 
             {
-
                 visible:
                     newVisible,
 
                 updatedAt:
                     Date.now()
-
             }
 
         )
 
-        // ✅ All Sub Categories
-
+        // CATEGORY KI SUBCATEGORIES
         const subQuery =
             query(
 
@@ -3139,25 +4361,51 @@ async (
         const batch =
             writeBatch(db)
 
-        for (const subDoc of subSnap.docs) {
+        const subVisibilityMap =
+            new Map()
+
+        /*
+        Category Show hone par manually Hidden
+        Subcategory Hidden hi rahegi.
+        */
+        for (
+            const subDoc
+            of subSnap.docs
+        ) {
+
+            const subData =
+                subDoc.data()
+
+            const manualHidden =
+                subData.manualHidden === true
+
+            const finalSubVisible =
+                newVisible
+                    ? !manualHidden
+                    : false
+
+            subVisibilityMap.set(
+                subDoc.id,
+                finalSubVisible
+            )
 
             batch.update(
 
                 subDoc.ref,
 
                 {
-
                     visible:
-                        newVisible
+                        finalSubVisible,
 
+                    updatedAt:
+                        Date.now()
                 }
 
             )
 
         }
 
-        // ✅ All Menu Items
-
+        // CATEGORY KE SABHI ITEMS
         const menuQuery =
             query(
 
@@ -3181,7 +4429,17 @@ async (
                 menuQuery
             )
 
-        for (const menuDoc of menuSnap.docs) {
+        /*
+        Item tabhi Visible hoga jab:
+
+        Category Visible ho
+        Subcategory Visible ho
+        Item manually Hidden na ho
+        */
+        for (
+            const menuDoc
+            of menuSnap.docs
+        ) {
 
             const data =
                 menuDoc.data()
@@ -3189,24 +4447,26 @@ async (
             const manualHidden =
                 data.manualHidden === true
 
+            const parentSubVisible =
+                subVisibilityMap.get(
+                    data.subCategoryId
+                ) !== false
+
+            const finalItemVisible =
+                newVisible &&
+                parentSubVisible &&
+                !manualHidden
+
             batch.update(
 
                 menuDoc.ref,
 
                 {
-
                     visible:
+                        finalItemVisible,
 
-                        newVisible
-
-                        ?
-
-                        !manualHidden
-
-                        :
-
-                        false
-
+                    updatedAt:
+                        Date.now()
                 }
 
             )
@@ -3215,29 +4475,34 @@ async (
 
         await batch.commit()
 
-    } catch(error) {
+    }
 
-        console.log(error)
+    catch (error) {
+
+        console.error(
+            "CATEGORY VISIBILITY ERROR:",
+            error
+        )
 
         alert(
             "Category Toggle Failed 😎"
         )
+
     }
 
 }
-window.toggleCategoryStock = async (
+window.toggleCategoryStock =
+async (
     categoryId,
     currentValue
 ) => {
 
     try {
 
-        const newStock = !currentValue;
+        const newStock =
+            !currentValue
 
-        // =========================
         // CATEGORY UPDATE
-        // =========================
-
         await updateDoc(
 
             doc(
@@ -3249,405 +4514,512 @@ window.toggleCategoryStock = async (
             ),
 
             {
+                stockEnabled:
+                    newStock,
 
-    stockEnabled: newStock,
+                available:
+                    newStock,
 
-    available: newStock,
+                updatedAt:
+                    Date.now()
+            }
 
-    updatedAt: Date.now()
+        )
 
-}
+        // CATEGORY KI SUBCATEGORIES
+        const subQuery =
+            query(
 
-        );
+                collection(
+                    db,
+                    "restaurants",
+                    restaurantId,
+                    "subcategories"
+                ),
 
-        // =========================
-        // GET SUB CATEGORIES
-        // =========================
+                where(
+                    "categoryId",
+                    "==",
+                    categoryId
+                )
 
-        const subQuery = query(
-
-            collection(
-                db,
-                "restaurants",
-                restaurantId,
-                "subcategories"
-            ),
-
-            where(
-                "categoryId",
-                "==",
-                categoryId
             )
 
-        );
+        const subSnap =
+            await getDocs(
+                subQuery
+            )
 
-        const subSnap = await getDocs(subQuery);
+        const batch =
+            writeBatch(db)
 
-        const batch = writeBatch(db);
-                // =========================
-        // UPDATE ALL SUB CATEGORIES
-        // =========================
+        const subStockMap =
+            new Map()
 
-        for (const subDoc of subSnap.docs) {
+        /*
+        Category In Stock hone par manually
+        Out of Stock Subcategory Out of Stock hi rahegi.
+        */
+        for (
+            const subDoc
+            of subSnap.docs
+        ) {
+
+            const subData =
+                subDoc.data()
+
+            const manualOutOfStock =
+                subData.manualOutOfStock === true
+
+            const finalSubStock =
+                newStock
+                    ? !manualOutOfStock
+                    : false
+
+            subStockMap.set(
+                subDoc.id,
+                finalSubStock
+            )
 
             batch.update(
 
                 subDoc.ref,
 
                 {
+                    available:
+                        finalSubStock,
 
-    stockEnabled: newStock,
+                    stockEnabled:
+                        finalSubStock,
 
-    available: newStock,
+                    updatedAt:
+                        Date.now()
+                }
 
-    updatedAt: Date.now()
-
-}
-
-            );
+            )
 
         }
 
-        // =========================
-        // GET ALL MENU ITEMS OF CATEGORY
-        // =========================
+        // CATEGORY KE SABHI ITEMS
+        const menuQuery =
+            query(
 
-        const menuQuery = query(
+                collection(
+                    db,
+                    "restaurants",
+                    restaurantId,
+                    "menu"
+                ),
 
-            collection(
-                db,
-                "restaurants",
-                restaurantId,
-                "menu"
-            ),
+                where(
+                    "categoryId",
+                    "==",
+                    categoryId
+                )
 
-            where(
-                "categoryId",
-                "==",
-                categoryId
             )
 
-        );
+        const menuSnap =
+            await getDocs(
+                menuQuery
+            )
 
-        const menuSnap = await getDocs(menuQuery);
+        /*
+        Item tabhi In Stock hoga jab:
 
-        for (const menuDoc of menuSnap.docs) {
+        Category In Stock ho
+        Subcategory In Stock ho
+        Item manually Out of Stock na ho
+        */
+        for (
+            const menuDoc
+            of menuSnap.docs
+        ) {
 
-            const data = menuDoc.data();
+            const data =
+                menuDoc.data()
 
             const manualOutOfStock =
-                data.manualOutOfStock === true;
+                data.manualOutOfStock === true
 
-            batch.update(
+            const parentSubStock =
+                subStockMap.get(
+                    data.subCategoryId
+                ) !== false
 
-    menuDoc.ref,
-
-    {
-
-        available:
-            newStock
-                ? !manualOutOfStock
-                : false,
-
-        stockEnabled:
-            newStock
-                ? !manualOutOfStock
-                : false,
-
-        updatedAt:
-            Date.now()
-
-    }
-
-);
-
-        }
-                // =========================
-        // SAVE ALL CHANGES
-        // =========================
-
-        await batch.commit();
-
-    } catch (error) {
-
-        console.log(error);
-
-        alert("Category Stock Update Failed 😎");
-
-    }
-
-}
-window.toggleSubCategoryVisibility = async (
-    subCategoryId,
-    currentValue
-) => {
-
-    try {
-
-        const newVisible = !currentValue;
-
-        // ✅ Update Sub Category
-        await updateDoc(
-
-            doc(
-                db,
-                "restaurants",
-                restaurantId,
-                "subcategories",
-                subCategoryId
-            ),
-
-            {
-
-                visible: newVisible,
-
-                updatedAt: Date.now()
-
-            }
-
-        );
-        // ✅ Agar Sub Category Show ho rahi hai
-// to Parent Category bhi Show karo
-
-if (newVisible) {
-
-    const subDocSnap = await getDoc(
-
-        doc(
-            db,
-            "restaurants",
-            restaurantId,
-            "subcategories",
-            subCategoryId
-        )
-
-    );
-
-    const categoryId =
-        subDocSnap.data()?.categoryId;
-
-    if (categoryId) {
-
-        await updateDoc(
-
-            doc(
-                db,
-                "restaurants",
-                restaurantId,
-                "categories",
-                categoryId
-            ),
-
-            {
-
-                visible: true,
-
-                updatedAt: Date.now()
-
-            }
-
-        );
-
-    }
-
-}
-
-        // ✅ Update Menu Items
-        const menuQuery = query(
-
-            collection(
-                db,
-                "restaurants",
-                restaurantId,
-                "menu"
-            ),
-
-            where(
-                "subCategoryId",
-                "==",
-                subCategoryId
-            )
-
-        );
-
-        const menuSnap = await getDocs(menuQuery);
-
-        const batch = writeBatch(db);
-
-        menuSnap.forEach((menuDoc) => {
-
-            const data = menuDoc.data();
-
-            const manualHidden =
-                data.manualHidden === true;
+            const finalItemStock =
+                newStock &&
+                parentSubStock &&
+                !manualOutOfStock
 
             batch.update(
 
                 menuDoc.ref,
 
                 {
+                    available:
+                        finalItemStock,
 
-                    visible: newVisible
-                        ? !manualHidden
-                        : false
+                    stockEnabled:
+                        finalItemStock,
 
+                    updatedAt:
+                        Date.now()
                 }
 
-            );
+            )
 
-        });
+        }
 
-        await batch.commit();
+        await batch.commit()
 
-    } catch (error) {
+    }
 
-        console.log(error);
+    catch (error) {
 
-        alert("SubCategory Toggle Failed 😎");
+        console.error(
+            "CATEGORY STOCK ERROR:",
+            error
+        )
+
+        alert(
+            "Category Stock Update Failed 😎"
+        )
 
     }
 
 }
-window.toggleSubCategoryStock = async (
+window.toggleSubCategoryVisibility =
+async (
     subCategoryId,
     currentValue
 ) => {
 
     try {
 
-        const newStock = !currentValue;
+        const newVisible =
+            !currentValue
 
-        // ✅ Update Sub Category
-        await updateDoc(
-
-    doc(
-        db,
-        "restaurants",
-        restaurantId,
-        "subcategories",
-        subCategoryId
-    ),
-
-    {
-
-        stockEnabled: newStock,
-
-        available: newStock,
-
-        updatedAt: Date.now()
-
-    }
-
-);
-        // ✅ Agar Sub Category In Stock ho rahi hai
-// to Parent Category bhi In Stock karo
-
-if (newStock) {
-
-    const subDocSnap = await getDoc(
-
-        doc(
-            db,
-            "restaurants",
-            restaurantId,
-            "subcategories",
-            subCategoryId
-        )
-
-    );
-
-    const categoryId =
-        subDocSnap.data()?.categoryId;
-
-    if (categoryId) {
-
-        await updateDoc(
-
+        const subCategoryRef =
             doc(
                 db,
                 "restaurants",
                 restaurantId,
-                "categories",
-                categoryId
-            ),
-
-            {
-
-    stockEnabled: true,
-
-    available: true,
-
-    updatedAt: Date.now()
-
-}
-
-        );
-
-    }
-
-}
-
-        // ✅ Update all menu items of this Sub Category
-        const menuQuery = query(
-
-            collection(
-                db,
-                "restaurants",
-                restaurantId,
-                "menu"
-            ),
-
-            where(
-                "subCategoryId",
-                "==",
+                "subcategories",
                 subCategoryId
             )
 
-        );
+        /*
+        Admin ne Subcategory ko manually Hide kiya hai,
+        isliye manualHidden field me setting save hogi.
+        */
+        await updateDoc(
 
-        const menuSnap = await getDocs(menuQuery);
+            subCategoryRef,
 
-        const batch = writeBatch(db);
+            {
+                visible:
+                    newVisible,
 
-        menuSnap.forEach((menuDoc) => {
+                manualHidden:
+                    !newVisible,
 
-    const data = menuDoc.data();
+                updatedAt:
+                    Date.now()
+            }
 
-    const manualOutOfStock =
-        data.manualOutOfStock === true;
+        )
 
-    batch.update(
+        /*
+        Subcategory ko Show karne par
+        parent Category bhi Show hogi.
+        */
+        if (newVisible) {
 
-    menuDoc.ref,
+            const subDocSnap =
+                await getDoc(
+                    subCategoryRef
+                )
 
-    {
+            const categoryId =
+                subDocSnap
+                    .data()
+                    ?.categoryId
 
-        available:
-            newStock
-                ? !manualOutOfStock
-                : false,
+            if (categoryId) {
 
-        stockEnabled:
-            newStock
-                ? !manualOutOfStock
-                : false,
+                await updateDoc(
 
-        updatedAt:
-            Date.now()
+                    doc(
+                        db,
+                        "restaurants",
+                        restaurantId,
+                        "categories",
+                        categoryId
+                    ),
+
+                    {
+                        visible:
+                            true,
+
+                        updatedAt:
+                            Date.now()
+                    }
+
+                )
+
+            }
+
+        }
+
+        // SUBCATEGORY KE ITEMS
+        const menuQuery =
+            query(
+
+                collection(
+                    db,
+                    "restaurants",
+                    restaurantId,
+                    "menu"
+                ),
+
+                where(
+                    "subCategoryId",
+                    "==",
+                    subCategoryId
+                )
+
+            )
+
+        const menuSnap =
+            await getDocs(
+                menuQuery
+            )
+
+        const batch =
+            writeBatch(db)
+
+        /*
+        Subcategory Show hone par manually
+        Hidden items Hidden hi rahenge.
+        */
+        for (
+            const menuDoc
+            of menuSnap.docs
+        ) {
+
+            const data =
+                menuDoc.data()
+
+            const manualHidden =
+                data.manualHidden === true
+
+            const finalItemVisible =
+                newVisible &&
+                !manualHidden
+
+            batch.update(
+
+                menuDoc.ref,
+
+                {
+                    visible:
+                        finalItemVisible,
+
+                    updatedAt:
+                        Date.now()
+                }
+
+            )
+
+        }
+
+        await batch.commit()
 
     }
 
-);
+    catch (error) {
 
-});
+        console.error(
+            "SUBCATEGORY VISIBILITY ERROR:",
+            error
+        )
 
-        await batch.commit();
+        alert(
+            "SubCategory Toggle Failed 😎"
+        )
 
-    } catch (error) {
+    }
 
-        console.log(error);
+}
+window.toggleSubCategoryStock =
+async (
+    subCategoryId,
+    currentValue
+) => {
 
-        alert("Sub Category Stock Update Failed");
+    try {
+
+        const newStock =
+            !currentValue
+
+        const subCategoryRef =
+            doc(
+                db,
+                "restaurants",
+                restaurantId,
+                "subcategories",
+                subCategoryId
+            )
+
+        /*
+        Admin ne Subcategory ko manually Out of Stock kiya,
+        to manualOutOfStock field us setting ko yaad rakhegi.
+        */
+        await updateDoc(
+
+            subCategoryRef,
+
+            {
+                stockEnabled:
+                    newStock,
+
+                available:
+                    newStock,
+
+                manualOutOfStock:
+                    !newStock,
+
+                updatedAt:
+                    Date.now()
+            }
+
+        )
+
+        /*
+        Subcategory ko In Stock karne par
+        parent Category bhi In Stock hogi.
+        */
+        if (newStock) {
+
+            const subDocSnap =
+                await getDoc(
+                    subCategoryRef
+                )
+
+            const categoryId =
+                subDocSnap
+                    .data()
+                    ?.categoryId
+
+            if (categoryId) {
+
+                await updateDoc(
+
+                    doc(
+                        db,
+                        "restaurants",
+                        restaurantId,
+                        "categories",
+                        categoryId
+                    ),
+
+                    {
+                        stockEnabled:
+                            true,
+
+                        available:
+                            true,
+
+                        updatedAt:
+                            Date.now()
+                    }
+
+                )
+
+            }
+
+        }
+
+        // SUBCATEGORY KE ITEMS
+        const menuQuery =
+            query(
+
+                collection(
+                    db,
+                    "restaurants",
+                    restaurantId,
+                    "menu"
+                ),
+
+                where(
+                    "subCategoryId",
+                    "==",
+                    subCategoryId
+                )
+
+            )
+
+        const menuSnap =
+            await getDocs(
+                menuQuery
+            )
+
+        const batch =
+            writeBatch(db)
+
+        /*
+        Subcategory In Stock hone par manually
+        Out of Stock items Out of Stock hi rahenge.
+        */
+        for (
+            const menuDoc
+            of menuSnap.docs
+        ) {
+
+            const data =
+                menuDoc.data()
+
+            const manualOutOfStock =
+                data.manualOutOfStock === true
+
+            const finalItemStock =
+                newStock &&
+                !manualOutOfStock
+
+            batch.update(
+
+                menuDoc.ref,
+
+                {
+                    available:
+                        finalItemStock,
+
+                    stockEnabled:
+                        finalItemStock,
+
+                    updatedAt:
+                        Date.now()
+                }
+
+            )
+
+        }
+
+        await batch.commit()
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "SUBCATEGORY STOCK ERROR:",
+            error
+        )
+
+        alert(
+            "Sub Category Stock Update Failed"
+        )
 
     }
 
@@ -3799,8 +5171,10 @@ subSlots.forEach((slot) => {
     subCategoryAvailable.checked =
         sub.available !== false
 
-    subCategoryAutoHide.checked =
-        sub.autoHide === true
+    subCategoryAutoHide.checked = false
+
+    subCategoryVisible.checked =
+        sub.visible !== false
 }
 closeSubCategoryTimingBtn.onclick =
 () => {
@@ -3848,10 +5222,13 @@ async () => {
     })),
 
                 autoHide:
-                    subCategoryAutoHide.checked,
+                    false,
 
                 available:
                     subCategoryAvailable.checked,
+
+                visible:
+                    subCategoryVisible.checked,
 
                 updatedAt:
                     Date.now()
@@ -4050,240 +5427,369 @@ window.removeEditItemSlot = (btn) => {
 
     btn.parentElement.remove()
 }
-async function uploadMenuRows(rows) {
-
-    for (const row of rows) {
-        if (
-    !row.Category ||
-    !row["Sub Category"] ||
-    !row["Item Name"]
+async function uploadMenuRows(
+    rows,
+    onProgress = null
 ) {
 
-    console.log(
-        "Skipped Row",
-        row
-    )
+    const existingIndex =
+        await loadExistingMenuIndex()
 
-    continue
-}
+    const categoryByName =
+        new Map()
+
+    let maximumCategorySortOrder = 0
+
+    existingIndex
+        .categorySnapshot
+        .forEach(
+            (categoryDocument) => {
+
+                const category =
+                    categoryDocument.data()
+
+                const categoryName =
+                    normalizeMenuText(
+                        category.name
+                    )
+
+                const sortOrder =
+                    Number(
+                        category.sortOrder ||
+                        0
+                    )
+
+                maximumCategorySortOrder =
+                    Math.max(
+                        maximumCategorySortOrder,
+                        sortOrder
+                    )
+
+                if (categoryName) {
+
+                    categoryByName.set(
+                        categoryName
+                            .toLowerCase(),
+                        {
+                            id:
+                                categoryDocument.id,
+                            name:
+                                categoryName,
+                            sortOrder
+                        }
+                    )
+                }
+            }
+        )
+
+    const subCategoryByName =
+        new Map()
+
+    const maximumSubSortOrder =
+        new Map()
+
+    existingIndex
+        .subCategorySnapshot
+        .forEach(
+            (subCategoryDocument) => {
+
+                const subCategory =
+                    subCategoryDocument.data()
+
+                const subCategoryName =
+                    normalizeMenuText(
+                        subCategory.name
+                    )
+
+                const sortOrder =
+                    Number(
+                        subCategory.sortOrder ||
+                        0
+                    )
+
+                const categoryId =
+                    subCategory.categoryId
+
+                maximumSubSortOrder.set(
+                    categoryId,
+                    Math.max(
+                        maximumSubSortOrder.get(
+                            categoryId
+                        ) || 0,
+                        sortOrder
+                    )
+                )
+
+                if (
+                    categoryId &&
+                    subCategoryName
+                ) {
+
+                    subCategoryByName.set(
+                        `${
+                            categoryId
+                        }|||${
+                            subCategoryName
+                                .toLowerCase()
+                        }`,
+                        {
+                            id:
+                                subCategoryDocument.id,
+                            name:
+                                subCategoryName,
+                            categoryId,
+                            sortOrder
+                        }
+                    )
+                }
+            }
+        )
+
+    const maximumItemSortOrder =
+        new Map()
+
+    existingIndex
+        .menuSnapshot
+        .forEach(
+            (menuDocument) => {
+
+                const item =
+                    menuDocument.data()
+
+                const subCategoryId =
+                    item.subCategoryId
+
+                const sortOrder =
+                    Number(
+                        item.sortOrder ||
+                        0
+                    )
+
+                if (subCategoryId) {
+
+                    maximumItemSortOrder.set(
+                        subCategoryId,
+                        Math.max(
+                            maximumItemSortOrder.get(
+                                subCategoryId
+                            ) || 0,
+                            sortOrder
+                        )
+                    )
+                }
+            }
+        )
+
+    const uploadedItemKeys =
+        new Set(
+            existingIndex
+                .existingItemKeys
+                .keys()
+        )
+
+    const skippedDuplicates = []
+
+    let uploadedCount = 0
+    let completedCount = 0
+
+    const reportProgress = () => {
+
+        completedCount += 1
+
+        if (
+            typeof onProgress ===
+            "function"
+        ) {
+
+            onProgress(
+                completedCount,
+                rows.length
+            )
+        }
+    }
+
+    for (const row of rows) {
+
+        const categoryName =
+            normalizeMenuText(
+                row.Category
+            )
+
+        const subCategoryName =
+            normalizeMenuText(
+                row["Sub Category"]
+            )
+
+        const itemName =
+            normalizeMenuText(
+                row["Item Name"]
+            )
+
+        if (
+            !categoryName ||
+            !subCategoryName ||
+            !itemName
+        ) {
+
+            reportProgress()
+
+            continue
+        }
+
+        const duplicateKey =
+            getMenuDuplicateKey(
+                categoryName,
+                subCategoryName,
+                itemName
+            )
+
+        if (
+            uploadedItemKeys.has(
+                duplicateKey
+            )
+        ) {
+
+            skippedDuplicates.push({
+                categoryName,
+                subCategoryName,
+                itemName
+            })
+
+            reportProgress()
+
+            continue
+        }
 
         // CATEGORY
 
-        let categoryId = null
-        console.log(
-    "Category =",
-    row.Category
-)
+        const categoryKey =
+            categoryName.toLowerCase()
 
-console.log(
-    "Sub Category =",
-    row["Sub Category"]
-)
-
-console.log(
-    "Item Name =",
-    row["Item Name"]
-)
-
-        const categoryQuery =
-            query(
-                collection(
-                    db,
-                    "restaurants",
-                    restaurantId,
-                    "categories"
-                ),
-                
-                where(
-                    "name",
-                    "==",
-                    row.Category
-                )
+        let category =
+            categoryByName.get(
+                categoryKey
             )
 
-        const categorySnap =
-            await getDocs(
-                categoryQuery
-            )
+        if (!category) {
 
-        if (
-            categorySnap.empty
-        ) {
-            let nextCategorySortOrder = 1000;
+            maximumCategorySortOrder +=
+                1000
 
-if (categories.length > 0) {
+            const categoryData = {
+                name:
+                    categoryName,
+                visible:
+                    true,
+                available:
+                    true,
+                sortOrder:
+                    maximumCategorySortOrder,
+                createdAt:
+                    Date.now()
+            }
 
-    nextCategorySortOrder = Math.max(
-        ...categories.map(c => c.sortOrder || 0)
-    ) + 1000;
-
-}
-
-            const categoryRef =
+            const categoryReference =
                 await addDoc(
-
                     collection(
                         db,
                         "restaurants",
                         restaurantId,
                         "categories"
                     ),
-
-                    {
-                        name:
-                            row.Category,
-
-                        visible: true,
-                        available: true,
-
-                        sortOrder:
-    nextCategorySortOrder,
-
-                        createdAt:
-                            Date.now()
-                    }
+                    categoryData
                 )
 
-            categoryId =
-                categoryRef.id
+            category = {
+                id:
+                    categoryReference.id,
+                ...categoryData
+            }
 
-                categories.push({
+            categoryByName.set(
+                categoryKey,
+                category
+            )
 
-    id: categoryRef.id,
-
-    name: row.Category,
-
-    sortOrder: nextCategorySortOrder
-
-});
-
-        } else {
-
-            categoryId =
-                categorySnap.docs[0].id
+            categories.push(
+                category
+            )
         }
 
+        const categoryId =
+            category.id
+
         // SUB CATEGORY
-        console.log(
-    "Creating/Checking SubCategory:",
-    row["Sub Category"]
-)
 
-        let subCategoryId =
-            null
+        const subCategoryKey =
+            `${
+                categoryId
+            }|||${
+                subCategoryName
+                    .toLowerCase()
+            }`
 
-        const subQuery =
-    query(
+        let subCategory =
+            subCategoryByName.get(
+                subCategoryKey
+            )
 
-        collection(
-            db,
-            "restaurants",
-            restaurantId,
-            "subcategories"
-        ),
+        if (!subCategory) {
 
-        where(
-            "categoryId",
-            "==",
-            categoryId
-        )
+            const nextSubSortOrder =
+                (
+                    maximumSubSortOrder.get(
+                        categoryId
+                    ) || 0
+                ) + 1000
 
-    )
+            maximumSubSortOrder.set(
+                categoryId,
+                nextSubSortOrder
+            )
 
-const subSnap =
-    await getDocs(
-        subQuery
-    )
-    const existingSub =
-    subSnap.docs.find(
+            const subCategoryData = {
+                name:
+                    subCategoryName,
+                categoryId,
+                visible:
+                    true,
+                available:
+                    true,
+                sortOrder:
+                    nextSubSortOrder,
+                createdAt:
+                    Date.now()
+            }
 
-        doc =>
-
-            doc.data().name
-                .trim()
-                .toLowerCase()
-
-            ===
-
-            row["Sub Category"]
-                .trim()
-                .toLowerCase()
-
-    )
-
-        if (
-    !existingSub
-) {
-console.log(
-    "ADDING SUBCATEGORY:",
-    row["Sub Category"]
-)
-let nextSubSortOrder = 1000;
-
-const sameCategorySubs = subCategories.filter(
-    sub => sub.categoryId === categoryId
-);
-
-if (sameCategorySubs.length > 0) {
-
-    nextSubSortOrder = Math.max(
-        ...sameCategorySubs.map(
-            sub => sub.sortOrder || 0
-        )
-    ) + 1000;
-
-}
-            const subRef =
+            const subCategoryReference =
                 await addDoc(
-
                     collection(
                         db,
                         "restaurants",
                         restaurantId,
                         "subcategories"
                     ),
-
-                    {
-                        name:
-                            row["Sub Category"],
-
-                        categoryId,
-
-                        visible: true,
-                        available: true,
-
-                        sortOrder:
-    nextSubSortOrder,
-
-                        createdAt:
-                            Date.now()
-                    }
+                    subCategoryData
                 )
 
-            subCategoryId =
-                subRef.id
-                subCategories.push({
+            subCategory = {
+                id:
+                    subCategoryReference.id,
+                ...subCategoryData
+            }
 
-    id: subRef.id,
+            subCategoryByName.set(
+                subCategoryKey,
+                subCategory
+            )
 
-    name: row["Sub Category"],
+            subCategories.push(
+                subCategory
+            )
+        }
 
-    categoryId,
-
-    sortOrder: nextSubSortOrder
-
-});
-
-                console.log(
-    "SUBCATEGORY CREATED:",
-    subRef.id
-)
-
-        } else {
-
-    subCategoryId =
-        existingSub.id
-}
+        const subCategoryId =
+            subCategory.id
 
         // VARIANTS
 
@@ -4292,44 +5798,34 @@ if (sameCategorySubs.length > 0) {
         if (row.Small) {
 
             variants.push({
-
-                name: "Small",
-
+                name:
+                    "Small",
                 price:
-                    Number(
-                        row.Small
-                    )
+                    Number(row.Small)
             })
         }
 
         if (row.Medium) {
 
             variants.push({
-
-                name: "Medium",
-
+                name:
+                    "Medium",
                 price:
-                    Number(
-                        row.Medium
-                    )
+                    Number(row.Medium)
             })
         }
 
         if (row.Large) {
 
             variants.push({
-
-                name: "Large",
-
+                name:
+                    "Large",
                 price:
-                    Number(
-                        row.Large
-                    )
+                    Number(row.Large)
             })
         }
 
         const finalPrice =
-
             variants.length > 0
 
             ?
@@ -4343,86 +5839,81 @@ if (sameCategorySubs.length > 0) {
             )
 
         // MENU ITEM
-        
-            let nextItemSortOrder = 1000;
 
-const sameSubItems = menuItems.filter(
-    item =>
-        item.subCategoryId === subCategoryId
-);
+        const nextItemSortOrder =
+            (
+                maximumItemSortOrder.get(
+                    subCategoryId
+                ) || 0
+            ) + 1000
 
-if (sameSubItems.length > 0) {
-
-    nextItemSortOrder = Math.max(
-        ...sameSubItems.map(
-            item => item.sortOrder || 0
+        maximumItemSortOrder.set(
+            subCategoryId,
+            nextItemSortOrder
         )
-    ) + 1000;
 
-}
-        await addDoc(
+        const menuItemData = {
+            name:
+                itemName,
+            description:
+                row.Description || "",
+            price:
+                finalPrice,
+            categoryId,
+            categoryName:
+                category.name,
+            subCategoryId,
+            subCategoryName:
+                subCategory.name,
+            veg:
+                true,
+            variants,
+            available:
+                row.Available !== false,
+            visible:
+                row.Visible !== false,
+            image:
+                "",
+            bestseller:
+                false,
+            recommended:
+                false,
+            hidden:
+                false,
+            createdAt:
+                Date.now(),
+            sortOrder:
+                nextItemSortOrder
+        }
 
-            collection(
-                db,
-                "restaurants",
-                restaurantId,
-                "menu"
-            ),
+        const menuItemReference =
+            await addDoc(
+                collection(
+                    db,
+                    "restaurants",
+                    restaurantId,
+                    "menu"
+                ),
+                menuItemData
+            )
 
-            {
-
-                name:
-                    row["Item Name"],
-
-                description:
-                    row.Description || "",
-
-                price:
-                    finalPrice,
-
-                categoryId,
-
-                categoryName:
-                    row.Category,
-
-                subCategoryId,
-
-                subCategoryName:
-                    row["Sub Category"],
-
-                veg: true,
-
-                variants,
-
-                available:
-                    row.Available !== false,
-
-                visible:
-                    row.Visible !== false,
-
-                image: "",
-
-                bestseller: false,
-
-                recommended: false,
-
-                hidden: false,
-
-                createdAt:
-                    Date.now(),
-
-                sortOrder:
-    nextItemSortOrder
-            }
-        )
         menuItems.push({
+            id:
+                menuItemReference.id,
+            ...menuItemData
+        })
 
-    categoryId,
+        uploadedItemKeys.add(
+            duplicateKey
+        )
 
-    subCategoryId,
+        uploadedCount += 1
 
-    sortOrder: nextItemSortOrder
+        reportProgress()
+    }
 
-});
+    return {
+        uploadedCount,
+        skippedDuplicates
     }
 }

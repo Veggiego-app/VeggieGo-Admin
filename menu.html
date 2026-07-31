@@ -1,116 +1,70 @@
 <!DOCTYPE html>
 
 <html lang="en">
-
 <head>
-
-<meta charset="UTF-8" />
-
-<meta
-name="viewport"
-content="width=device-width, initial-scale=1.0"
-/>
-
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>
 Menu Management
 </title>
-
-<link
-rel="stylesheet"
-href="style.css"
-/>
-
-<link
-rel="stylesheet"
-href="menu.css"
-/>
-
+<link href="style.css" rel="stylesheet"/>
+<link href="menu.css" rel="stylesheet"/>
 </head>
-
 <body>
-
 <!-- SIDEBAR -->
-
 <div class="sidebar">
-
-    <div class="sidebar-logo">
+<div class="sidebar-logo">
         🍃 VeggieGo
     </div>
-
-    <div class="menu">
-
-        <a href="index.html" class="menu-item">
+<div class="menu">
+<a class="menu-item" href="index.html">
             📊 Dashboard
         </a>
-
-        <a href="restaurants.html" class="menu-item active">
+<a class="menu-item active" href="restaurants.html">
             🍽 Restaurants
         </a>
-
-        <a href="riders.html" class="menu-item">
+<a class="menu-item" href="riders.html">
             🛵 Riders
         </a>
-
-        <a href="customers.html" class="menu-item">
+<a class="menu-item" href="customers.html">
             👤 Customers
         </a>
-
-        <a href="analytics.html" class="menu-item">
+<a class="menu-item" href="analytics.html">
             📊 Analytics
         </a>
-
-        <a href="cod-settlement.html" class="menu-item">
+<a class="menu-item" href="cod-settlement.html">
             💵 COD Settlement
         </a>
-
-        <a href="settings.html" class="menu-item">
+<a class="menu-item" href="settings.html">
             ⚙ Settings
         </a>
-
-    </div>
-
-    <div class="admin-profile">
-
-        <div class="admin-name">
+</div>
+<div class="admin-profile">
+<div class="admin-name">
             VeggieGo Admin
         </div>
-
-        <div class="admin-role">
+<div class="admin-role">
             🟢 Super Admin
         </div>
-
-        <button
-            class="logout-btn"
-            id="logoutBtn">
+<button class="logout-btn" id="logoutBtn">
 
             ⎋ Logout
 
         </button>
-
-    </div>
-
 </div>
-
+</div>
 <div class="main">
-
 <h1>
 🍃 Menu Management
 </h1>
-
-<div id="restaurantInfo" class="restaurant-info">
-
-    <h2 id="restaurantName">Restaurant Name</h2>
-
-    <p id="restaurantOwner">
+<div class="restaurant-info" id="restaurantInfo">
+<h2 id="restaurantName">Restaurant Name</h2>
+<p id="restaurantOwner">
         Owner : --
     </p>
-
 </div>
-
 <!-- TOP DASHBOARD -->
-
 <div class="menu-dashboard">
-
 <div class="dash-card">
 <h2 id="totalItems">
 0
@@ -119,7 +73,6 @@ href="menu.css"
 Total Items
 </p>
 </div>
-
 <div class="dash-card">
 <h2 id="totalCategories">
 0
@@ -128,7 +81,6 @@ Total Items
 Categories
 </p>
 </div>
-
 <div class="dash-card">
 <h2 id="availableItems">
 0
@@ -137,7 +89,6 @@ Categories
 Available
 </p>
 </div>
-
 <div class="dash-card">
 <h2 id="hiddenItems">
 0
@@ -146,801 +97,278 @@ Available
 Hidden
 </p>
 </div>
-
 </div>
-
 <!-- MAIN LAYOUT -->
-
-<div class="menu-layout">
-
-<!-- LEFT -->
-
-<div class="category-panel">
-
-<div class="panel-top">
-
-<h2>
-Categories
-</h2>
-<div
-style="
-display:flex;
-flex-direction:column;
-gap:12px;
-margin-top:15px;
-"
->
-
+<div class="menu-layout menu-layout-v2">
+<!-- LEFT CATEGORY TREE -->
+<div class="category-panel category-tree-panel">
+<div class="panel-top category-tree-top">
+<h2>Menu Structure</h2>
+<div class="tree-top-actions">
+<button id="addCategoryBtn">+ Category</button>
+<button id="addSubCategoryBtn">+ Subcategory</button>
 </div>
-
-<button id="addCategoryBtn">
-+ Add
-</button>
-
 </div>
-
-<div id="categoriesContainer">
-
+<div class="category-tree-container" id="categoriesContainer"></div>
+<!-- Kept for existing JS compatibility -->
+<div aria-hidden="true" class="legacy-subcategory-container" id="subCategoriesContainer"></div>
 </div>
-
-</div>
-
-<!-- CENTER -->
-
-<div class="subcategory-panel">
-
-<div class="panel-top">
-
-<h2>
-Sub Categories
-</h2>
-
-<button id="addSubCategoryBtn">
-+ Add
-</button>
-
-</div>
-
-<div id="subCategoriesContainer">
-
-</div>
-
-</div>
-
 <!-- RIGHT -->
-
 <div class="items-panel">
-
 <div class="panel-top">
-
-<h2>
-Menu Items
-</h2>
-
-<button id="addItemBtn">
-+ Add Item
-</button>
-<input
-type="file"
-id="excelFile"
-accept=".xlsx,.xls"
-hidden
->
-
-<button
-id="uploadExcelBtn"
-style="
-background:#22c55e;
-color:white;
-border:none;
-padding:12px 20px;
-border-radius:10px;
-cursor:pointer;
-margin-left:10px;
-"
->
+<h2>Menu Items — Row View</h2>
+<button id="addItemBtn">+ Add Item</button>
+<input accept=".xlsx,.xls" hidden="" id="excelFile" type="file"/>
+<button id="uploadExcelBtn" style="background:#22c55e;color:white;border:none;padding:12px 20px;border-radius:10px;cursor:pointer;margin-left:10px;">
 📊 Upload Excel
 </button>
-
 </div>
-
-<input
-type="text"
-id="searchInput"
-placeholder="Search item..."
-/>
-
-<div id="itemsContainer">
-
-</div>
+<input id="searchInput" placeholder="Search item..." type="text">
+<div id="itemsContainer"></div>
 <!-- EDIT ITEM MODAL -->
-
-<div
-class="modal"
-id="editItemModal"
->
-
-<div class="modal-content">
-
-<h2>
-Edit Item 😎
-</h2>
-
-<input
-type="text"
-id="editItemName"
-placeholder="Item Name"
-/>
-<br><br>
-
-<textarea
-
-id="editItemDescription"
-
-placeholder="Item Description"
-
-class="custom-textarea"
-
-></textarea>
-
-<br><br>
-
-<input
-type="number"
-id="editItemPrice"
-placeholder="Base Price"
-/>
-
-<br><br>
-
-<select id="editItemType">
-
-<option value="veg">
-
-🟩 Pure Veg
-
-</option>
-
-</select>
-
-<input
-type="file"
-id="editItemImage"
-accept="image/*"
-/>
-
-<br><br>
-
-<img
-id="editPreviewImage"
-style="
-width:100%;
-height:220px;
-object-fit:cover;
-border-radius:16px;
-display:none;
-margin-top:10px;
-"
-/>
-
-<br><br>
-
-<label class="switch-row">
-
-<span>
-Available
-</span>
-
-<input
-type="checkbox"
-id="editAvailable"
-checked
-/>
-
-</label>
-
-<label class="switch-row">
-
-<span>
-Show Item
-</span>
-
-<input
-type="checkbox"
-id="editVisible"
-checked
-/>
-
-</label>
-
-<label class="switch-row">
-
-<span>
-Bestseller
-</span>
-
-<input
-type="checkbox"
-id="editBestseller"
-/>
-
-</label>
-
-<label class="switch-row">
-
-<span>
-Recommended
-</span>
-
-<input
-type="checkbox"
-id="editRecommended"
-/>
-
-</label>
-
-<br>
-
-<div id="editItemTimeSlotsContainer">
-
+<div class="modal" id="editItemModal">
+<div class="modal-shell modal-shell-wide">
+<div class="modal-head">
+<div><h2>✎ Edit Item</h2><p>Update item details, variants, schedule and availability</p></div>
+<button class="modal-close-x" onclick="document.getElementById('editItemModal').style.display='none'" type="button">✕</button>
 </div>
-
-<button
-    type="button"
-    class="add-slot-btn"
-    onclick="addEditItemSlot()"
->
-
-    + Add Time Slot
-
-</button>
-
-<br><br>
-
-<div id="editVariantsContainer">
-
+<div class="modal-scroll-body item-edit-grid">
+<div class="item-edit-left">
+<section class="edit-section">
+<h3>Basic Information</h3>
+<label class="field-label" for="editItemName">Item Name <b>*</b></label>
+<input id="editItemName" placeholder="Item Name" type="text"/>
+<label class="field-label" for="editItemDescription">Item Description</label>
+<textarea class="custom-textarea" id="editItemDescription" placeholder="Item Description"></textarea>
+<label class="field-label" for="editItemPrice">Price (₹) <b>*</b></label>
+<input id="editItemPrice" placeholder="Base Price" type="number"/>
+<label class="field-label" for="editItemType">Food Type <b>*</b></label>
+<select id="editItemType"><option value="veg">🟩 Pure Veg</option></select>
+<label class="field-label" for="editItemImage">Image</label>
+<input accept="image/*" id="editItemImage" type="file"/>
+<img alt="Item preview" class="edit-image-preview" id="editPreviewImage"/>
+</section>
+<section class="edit-section">
+<div class="section-title-with-action"><h3>Variants</h3><button class="small-purple-btn" id="editAddVariantBtn" type="button">＋ Add Variant</button></div>
+<div class="variants-edit-list" id="editVariantsContainer"></div>
+</section>
 </div>
-
-<button
-id="editAddVariantBtn"
-class="approve-btn"
->
-
-+ Add Variant
-
-</button>
-
-<br><br>
-
-<div class="modal-buttons">
-
-<button
-id="updateItemBtn"
-class="approve-btn"
->
-
-UPDATE
-
-</button>
-
-<button
-id="closeEditItemBtn"
-class="reject-btn"
->
-
-CANCEL
-
-</button>
-
+<div class="item-edit-right">
+<section class="edit-section">
+<h3>Availability &amp; Status</h3>
+<label class="setting-toggle-row"><div><strong>In Stock</strong><span>Item order ke liye available rahega.</span></div><input checked="" id="editAvailable" type="checkbox"/></label>
+<label class="setting-toggle-row"><div><strong>Visible</strong><span>Item customers ko dikhai dega.</span></div><input checked="" id="editVisible" type="checkbox"/></label>
+<label class="setting-toggle-row"><div><strong>Bestseller</strong><span>Item ko bestseller badge milega.</span></div><input id="editBestseller" type="checkbox"/></label>
+<label class="setting-toggle-row"><div><strong>Recommended</strong><span>Item recommended section me dikhega.</span></div><input id="editRecommended" type="checkbox"/></label>
+</section>
+<section class="edit-section">
+<h3>Schedule / Time Slots</h3>
+<p class="section-help">Item selected time slots ke andar available rahega.</p>
+<div class="schedule-list" id="editItemTimeSlotsContainer"></div>
+<button class="outline-add-btn" onclick="addEditItemSlot()" type="button">＋ Add Time Slot</button>
+<div class="schedule-note">ⓘ Koi time slot add nahi ho to item poore din available rahega.</div>
+</section>
 </div>
-
 </div>
-
+<div class="modal-sticky-footer">
+<button class="secondary-action-btn" id="closeEditItemBtn" type="button">Cancel</button>
+<button class="primary-action-btn green" id="updateItemBtn" type="button">💾 Update Item</button>
 </div>
-
 </div>
-
 </div>
-
+</input></div>
+</div>
 </div>
 <!-- CATEGORY MODAL -->
-
-<div
-class="modal"
-id="categoryModal"
->
-
+<div class="modal" id="categoryModal">
 <div class="modal-content">
-
 <h2>
 Add Category 😎
 </h2>
-
-<input
-type="text"
-id="categoryName"
-placeholder="Category Name"
-/>
-
-<br><br>
-
+<input id="categoryName" placeholder="Category Name" type="text"/>
+<br/><br/>
 <div class="modal-buttons">
-
-<button
-id="saveCategoryBtn"
-class="approve-btn"
->
+<button class="approve-btn" id="saveCategoryBtn">
 SAVE
 </button>
-
-<button
-id="closeCategoryBtn"
-class="reject-btn"
->
+<button class="reject-btn" id="closeCategoryBtn">
 CANCEL
 </button>
-
 </div>
-
 </div>
-
 </div>
 <!-- SUB CATEGORY MODAL -->
-
-<div
-class="modal"
-id="subCategoryModal"
->
-
+<div class="modal" id="subCategoryModal">
 <div class="modal-content">
-
 <h2>
 Add Sub Category 😎
 </h2>
-
-<input
-type="text"
-id="subCategoryName"
-placeholder="Sub Category Name"
-/>
-
-<br><br>
-
+<input id="subCategoryName" placeholder="Sub Category Name" type="text"/>
+<br/><br/>
 <div class="modal-buttons">
-
-<button
-id="saveSubCategoryBtn"
-class="approve-btn"
->
+<button class="approve-btn" id="saveSubCategoryBtn">
 SAVE
 </button>
-
-<button
-id="closeSubCategoryBtn"
-class="reject-btn"
->
+<button class="reject-btn" id="closeSubCategoryBtn">
 CANCEL
 </button>
-
 </div>
-
 </div>
-
 </div>
 <!-- SUB CATEGORY TIMING MODAL -->
-
-<div
-class="modal"
-id="subCategoryTimingModal"
->
-
-<div class="modal-content">
-
-<h2>
-✏️ Edit Sub Category
-</h2>
-
-<br><br>
-
-<input
-type="text"
-id="editSubCategoryName"
-placeholder="SubCategory Name"
-/>
-
-<br><br>
-
-<div id="subCategoryTimeSlotsContainer">
-
-    <div class="time-slot-row">
-
-        <input
-            type="time"
-            class="subcategory-slot-start"
-        >
-
-        <input
-            type="time"
-            class="subcategory-slot-end"
-        >
-
-        <button
-            class="delete-slot-btn"
-            onclick="removeSubCategorySlot(this)"
-        >
-            ✕
-        </button>
-
-    </div>
-
+<div class="modal" id="subCategoryTimingModal">
+<div class="modal-shell modal-shell-compact">
+<div class="modal-head">
+<div><h2>✎ Edit Sub Category</h2><p>Update sub category details, schedule and availability</p></div>
+<button class="modal-close-x" onclick="document.getElementById('subCategoryTimingModal').style.display='none'" type="button">✕</button>
 </div>
-
-<button
-    type="button"
-    class="add-slot-btn"
-    onclick="addSubCategorySlot()"
->
-
-    + Add Time Slot
-
-</button>
-
-<br><br>
-
-<label class="switch-row">
-
-<span>
-Auto Hide
-</span>
-
-<input
-type="checkbox"
-id="subCategoryAutoHide"
-checked
-/>
-
-</label>
-
-<label class="switch-row">
-
-<span>
-Available
-</span>
-
-<input
-type="checkbox"
-id="subCategoryAvailable"
-checked
-/>
-
-</label>
-
-<div class="modal-buttons">
-
-<button
-id="saveSubCategoryTimingBtn"
-class="approve-btn"
->
-
-SAVE
-
-</button>
-
-<button
-id="closeSubCategoryTimingBtn"
-class="reject-btn"
->
-
-CANCEL
-
-</button>
-
+<div class="modal-scroll-body">
+<section class="edit-section">
+<h3>Basic Information</h3>
+<label class="field-label" for="editSubCategoryName">Sub Category Name <b>*</b></label>
+<input id="editSubCategoryName" placeholder="Sub Category Name" type="text"/>
+</section>
+<section class="edit-section">
+<h3>Schedule / Time Slots</h3>
+<p class="section-help">Sub category customer app me sirf selected time slots ke andar available rahegi.</p>
+<div class="schedule-list" id="subCategoryTimeSlotsContainer"></div>
+<button class="outline-add-btn" onclick="addSubCategorySlot()" type="button">＋ Add Time Slot</button>
+<div class="schedule-note">ⓘ Koi time slot add nahi ho to sub category poore din available rahegi.</div>
+</section>
+<section class="edit-section">
+<h3>Settings</h3>
+<label class="setting-toggle-row"><div><strong>Available</strong><span>Off karne par sub category aur uske items unavailable ho jayenge.</span></div><input checked="" id="subCategoryAvailable" type="checkbox"/></label>
+<label class="setting-toggle-row"><div><strong>Visible</strong><span>Off karne par sub category customers se hide ho jayegi.</span></div><input checked="" id="subCategoryVisible" type="checkbox"/></label>
+<input hidden="" id="subCategoryAutoHide" type="checkbox"/>
+</section>
 </div>
-
+<div class="modal-sticky-footer">
+<button class="secondary-action-btn" id="closeSubCategoryTimingBtn" type="button">Cancel</button>
+<button class="primary-action-btn" id="saveSubCategoryTimingBtn" type="button">💾 Save Changes</button>
 </div>
-
+</div>
 </div>
 <!-- ITEM MODAL -->
-
-<div
-class="modal"
-id="itemModal"
->
-
+<div class="modal" id="itemModal">
 <div class="modal-content">
-
 <h2>
 Add Item 😎
 </h2>
-
-<input
-type="text"
-id="itemName"
-placeholder="Item Name"
-/>
-
-<br><br>
-
-<textarea
-
-id="itemDescription"
-
-placeholder="Item Description"
-
-class="custom-textarea"
-
-></textarea>
-
-<br><br>
-
-<input
-type="number"
-id="itemPrice"
-placeholder="Base Price"
-/>
-
-<br><br>
-
+<input id="itemName" placeholder="Item Name" type="text"/>
+<br/><br/>
+<textarea class="custom-textarea" id="itemDescription" placeholder="Item Description"></textarea>
+<br/><br/>
+<input id="itemPrice" placeholder="Base Price" type="number"/>
+<br/><br/>
 <select id="itemType">
-
 <option value="veg">
 
 🟩 Pure Veg
 
 </option>
-
 </select>
-<input
-type="file"
-id="itemImage"
-accept="image/*"
-/>
-
-<br><br>
-
-<img
-id="previewImage"
-style="
+<input accept="image/*" id="itemImage" type="file"/>
+<br/><br/>
+<img id="previewImage" style="
 width:100%;
 height:220px;
 object-fit:cover;
 border-radius:16px;
 display:none;
 margin-top:10px;
-"
-/>
-<br><br>
-
+"/>
+<br/><br/>
 <label class="switch-row">
-
 <span>
 Available
 </span>
-
-<input
-type="checkbox"
-id="itemAvailable"
-checked
-/>
-
+<input checked="" id="itemAvailable" type="checkbox"/>
 </label>
-
 <label class="switch-row">
-
 <span>
 Show Item
 </span>
-
-<input
-type="checkbox"
-id="itemVisible"
-checked
-/>
-
+<input checked="" id="itemVisible" type="checkbox"/>
 </label>
-
 <label class="switch-row">
-
 <span>
 Bestseller
 </span>
-
-<input
-type="checkbox"
-id="itemBestseller"
-/>
-
+<input id="itemBestseller" type="checkbox"/>
 </label>
-
 <label class="switch-row">
-
 <span>
 Recommended
 </span>
-
-<input
-type="checkbox"
-id="itemRecommended"
-/>
-
+<input id="itemRecommended" type="checkbox"/>
 </label>
-
-<br>
-
+<br/>
 <div id="itemTimeSlotsContainer">
-
 </div>
-
-<button
-    type="button"
-    class="add-slot-btn"
-    onclick="addItemSlot()"
->
+<button class="add-slot-btn" onclick="addItemSlot()" type="button">
 
     + Add Time Slot
 
 </button>
-
-<br><br>
+<br/><br/>
 <div id="variantsContainer">
-
 </div>
-
-<button
-id="addVariantBtn"
-class="approve-btn"
->
+<button class="approve-btn" id="addVariantBtn">
 
 + Add Variant
 
 </button>
-
-<br><br>
-
+<br/><br/>
 <div class="modal-buttons">
-
-<button
-id="saveItemBtn"
-class="approve-btn"
->
+<button class="approve-btn" id="saveItemBtn">
 
 SAVE
 
 </button>
-
-<button
-id="closeItemBtn"
-class="reject-btn"
->
+<button class="reject-btn" id="closeItemBtn">
 
 CANCEL
 
 </button>
-
 </div>
-
 </div>
-
 </div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script
-type="module"
-src="menu.js"
-></script>
+<script src="menu.js" type="module"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <!-- CATEGORY TIMING MODAL -->
-
-<div
-class="modal"
-id="categoryTimingModal"
->
-
-<div class="modal-content">
-
-<h2>
-✏️ Edit Category
-</h2>
-
-
-<br><br>
-<input
-type="text"
-id="editCategoryName"
-placeholder="Category Name"
-/>
-
-<br><br>
-<div id="categoryTimeSlotsContainer">
-
-    <div class="time-slot-row">
-
-        <input
-            type="time"
-            class="category-slot-start"
-        >
-
-        <input
-            type="time"
-            class="category-slot-end"
-        >
-
-        <button
-            class="delete-slot-btn"
-            onclick="removeCategorySlot(this)"
-        >
-            ✕
-        </button>
-
-    </div>
-
+<div class="modal" id="categoryTimingModal">
+<div class="modal-shell modal-shell-compact">
+<div class="modal-head">
+<div><h2>✎ Edit Category</h2><p>Update category details, schedule and availability</p></div>
+<button class="modal-close-x" onclick="document.getElementById('categoryTimingModal').style.display='none'" type="button">✕</button>
 </div>
-
-<button
-    type="button"
-    class="add-slot-btn"
-    onclick="addCategorySlot()"
->
-
-    + Add Time Slot
-
-</button>
-
-<br><br>
-
-<label class="switch-row">
-
-<span>
-Auto Hide
-</span>
-
-<input
-type="checkbox"
-id="categoryAutoHide"
-checked
-/>
-
-</label>
-
-<label class="switch-row">
-
-<span>
-Available
-</span>
-
-<input
-type="checkbox"
-id="categoryAvailable"
-checked
-/>
-
-</label>
-
-<div class="modal-buttons">
-
-<button
-id="saveCategoryTimingBtn"
-class="approve-btn"
->
-
-SAVE
-
-</button>
-
-<button
-id="closeCategoryTimingBtn"
-class="reject-btn"
->
-
-CANCEL
-
-</button>
-
+<div class="modal-scroll-body">
+<section class="edit-section">
+<h3>Basic Information</h3>
+<label class="field-label" for="editCategoryName">Category Name <b>*</b></label>
+<input id="editCategoryName" placeholder="Category Name" type="text"/>
+</section>
+<section class="edit-section">
+<h3>Schedule / Time Slots</h3>
+<p class="section-help">Category customer app me sirf selected time slots ke andar available rahegi.</p>
+<div class="schedule-list" id="categoryTimeSlotsContainer"></div>
+<button class="outline-add-btn" onclick="addCategorySlot()" type="button">＋ Add Time Slot</button>
+<div class="schedule-note">ⓘ Koi time slot add nahi ho to category poore din available rahegi.</div>
+</section>
+<section class="edit-section">
+<h3>Settings</h3>
+<label class="setting-toggle-row"><div><strong>Available</strong><span>Off karne par category aur uske items unavailable ho jayenge.</span></div><input checked="" id="categoryAvailable" type="checkbox"/></label>
+<label class="setting-toggle-row"><div><strong>Visible</strong><span>Off karne par category customers se hide ho jayegi.</span></div><input checked="" id="categoryVisible" type="checkbox"/></label>
+<input hidden="" id="categoryAutoHide" type="checkbox"/>
+</section>
 </div>
-
+<div class="modal-sticky-footer">
+<button class="secondary-action-btn" id="closeCategoryTimingBtn" type="button">Cancel</button>
+<button class="primary-action-btn" id="saveCategoryTimingBtn" type="button">💾 Save Changes</button>
 </div>
-
+</div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 </body>
-
 </html>

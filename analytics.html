@@ -1,741 +1,412 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VeggieGo Analytics</title>
-    <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="analytics.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>VeggieGo Finance & Settlements</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="analytics.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
-
 <body>
     <script type="module">
-        import { auth } from "./firebase.js"
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+        import { auth } from "./firebase.js";
+        import {
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        onAuthStateChanged(
-auth,
-async (user) => {
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+                return;
+            }
 
-    if (!user) {
-
-        window.location.href =
-        "login.html"
-
-        return
-
-    }
-
-    const adminEmails = [
-    "support@veggiego.co.in"
-]
-
-    if (
-
-        !adminEmails.includes(
-            user.email
-        )
-
-    ) {
-
-        await auth.signOut()
-
-        alert(
-            "Access Denied"
-        )
-
-        window.location.href =
-        "login.html"
-
-        return
-
-    }
-
-})
+            const adminEmails = ["support@veggiego.co.in"];
+            if (!adminEmails.includes(user.email || "")) {
+                await signOut(auth);
+                alert("Access Denied");
+                window.location.href = "login.html";
+            }
+        });
     </script>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <div class="sidebar-logo">
-            🍃 VeggieGo
-        </div>
-
-        <div class="menu">
-            <a href="index.html" class="menu-item">
-                📊 Dashboard
-            </a>
-
-            <a href="restaurants.html" class="menu-item">
-                🍽 Restaurants
-            </a>
-
-            <a href="riders.html" class="menu-item">
-                🚚 Riders
-            </a>
-
-            <a href="customers.html" class="menu-item">
-    👤 Customers
-</a>
-
-            <a href="analytics.html" class="menu-item active">
-                📊 Analytics
-            </a>
-            <a href="cod-settlement.html" class="menu-item">
-💵 COD Settlement
-</a>
-
-            <a href="settings.html" class="menu-item">
-                ⚙ Settings
-            </a>
-        </div>
-
+    <aside class="sidebar">
+        <div class="sidebar-logo">🍃 VeggieGo</div>
+        <nav class="menu">
+            <a href="index.html" class="menu-item">📊 Dashboard</a>
+            <a href="restaurants.html" class="menu-item">🍽 Restaurants</a>
+            <a href="riders.html" class="menu-item">🚚 Riders</a>
+            <a href="customers.html" class="menu-item">👤 Customers</a>
+            <a href="analytics.html" class="menu-item active">📈 Analytics</a>
+            <a href="cod-settlement.html" class="menu-item">💵 COD Settlement</a>
+            <a href="settings.html" class="menu-item">⚙ Settings</a>
+        </nav>
         <div class="admin-profile">
-            <div class="admin-name">
-                VeggieGo Admin
-            </div>
-
-            <div class="admin-role">
-                🟢 Super Admin
-            </div>
-
-            <button class="logout-btn" id="logoutBtn">
-                ⎋ Logout
-            </button>
+            <strong>VeggieGo Admin</strong>
+            <span><i class="status-dot"></i> Super Admin</span>
+            <button id="logoutBtn" type="button">⏻ Logout</button>
         </div>
-    </div>
+    </aside>
 
-    <!-- MAIN CONTENT -->
-    <div class="main">
-        <!-- TOPBAR -->
-        <div class="topbar">
-            <div class="title">
-                📊 Analytics Dashboard
+    <main class="main finance-page">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">FINANCE CONTROL CENTRE</p>
+                <h1 class="title">Analytics & Settlements</h1>
+                <p class="page-subtitle">Live sales, payable amounts and auditable restaurant/rider settlements.</p>
             </div>
-
-            <div class="live-box">
-                🟢 LIVE
+            <div class="topbar-actions">
+                <span class="live-box"><i></i> LIVE</span>
+                <span id="lastUpdated" class="last-updated">Waiting for data…</span>
             </div>
-        </div>
+        </header>
 
-        <!-- ANALYTICS CONTAINER -->
-        <div class="analytics-container">
+        <section class="panel filter-panel">
+            <div class="section-heading compact-heading">
+                <div>
+                    <p class="section-kicker">GLOBAL FILTERS</p>
+                    <h2>Reporting period</h2>
+                </div>
+                <button id="resetFiltersBtn" class="btn btn-ghost" type="button">Reset</button>
+            </div>
+            <div class="filter-grid">
+                <label class="field">
+                    <span>Period</span>
+                    <select id="datePreset">
+                        <option value="TODAY">Today</option>
+                        <option value="YESTERDAY">Yesterday</option>
+                        <option value="LAST_7">Last 7 days</option>
+                        <option value="THIS_MONTH">This month</option>
+                        <option value="LAST_MONTH">Last month</option>
+                        <option value="ALL" selected>All dates</option>
+                        <option value="CUSTOM">Custom range</option>
+                    </select>
+                </label>
+                <label class="field custom-date-field hidden" id="fromDateWrap">
+                    <span>From date</span>
+                    <input id="filterFromDate" type="date">
+                </label>
+                <label class="field custom-date-field hidden" id="toDateWrap">
+                    <span>To date</span>
+                    <input id="filterToDate" type="date">
+                </label>
+                <label class="field">
+                    <span>Restaurant</span>
+                    <select id="restaurantFilter"><option value="">All restaurants</option></select>
+                </label>
+                <label class="field">
+                    <span>Rider</span>
+                    <select id="riderFilter"><option value="">All riders</option></select>
+                </label>
+                <label class="field">
+                    <span>Payment</span>
+                    <select id="paymentFilter">
+                        <option value="">All methods</option>
+                        <option value="COD">COD</option>
+                        <option value="ONLINE">Online</option>
+                    </select>
+                </label>
+                <button id="applyFiltersBtn" class="btn btn-primary filter-apply" type="button">Apply filters</button>
+            </div>
+            <p class="helper-text">GST is not included yet. All calculations on this page are currently GST-free.</p>
+        </section>
 
-            <!-- TOP STATISTICS SECTION -->
-            <div class="analytics-section">
-                <h2 class="section-title">📈 Top Statistics</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalOrders">0</div>
-                        <div class="stat-label">Total Orders</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalRevenue">₹0</div>
-                        <div class="stat-label">Total Revenue</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="todaysOrders">0</div>
-                        <div class="stat-label">Today's Orders</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="todaysRevenue">₹0</div>
-                        <div class="stat-label">Today's Revenue</div>
-                    </div>
+        <section class="panel health-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">DATA HEALTH CHECK</p>
+                    <h2>Issues requiring attention</h2>
+                </div>
+                <span id="healthStatus" class="badge badge-success">All clear</span>
+            </div>
+            <div class="metric-grid metric-grid-4">
+                <button id="missingCommissionCard" class="metric-card health-card" data-health="COMMISSION" type="button">
+                    <span class="metric-icon danger">%</span>
+                    <span><small>Missing commission</small><strong id="missingCommissionCount">0</strong></span>
+                </button>
+                <button id="missingRiderCard" class="metric-card health-card" data-health="RIDER" type="button">
+                    <span class="metric-icon warning">R</span>
+                    <span><small>Missing rider mapping</small><strong id="missingRiderCount">0</strong></span>
+                </button>
+                <button id="amountMismatchCard" class="metric-card health-card" data-health="MISMATCH" type="button">
+                    <span class="metric-icon warning">₹</span>
+                    <span><small>Amount mismatches</small><strong id="amountMismatchCount">0</strong></span>
+                </button>
+                <button id="pendingSettlementCard" class="metric-card health-card" data-health="PENDING" type="button">
+                    <span class="metric-icon info">S</span>
+                    <span><small>Pending settlements</small><strong id="pendingSettlementCount">0</strong></span>
+                </button>
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <div class="section-heading outside-heading">
+                <div>
+                    <p class="section-kicker">FINANCIAL SUMMARY</p>
+                    <h2>Delivered-order performance</h2>
                 </div>
             </div>
+            <div class="metric-grid metric-grid-4 summary-grid">
+                <article class="metric-card"><small>Delivered Orders</small><strong id="summaryDeliveredOrders">0</strong><em>Final orders only</em></article>
+                <article class="metric-card"><small>Item + Packaging Sales</small><strong id="summaryGrossSales">₹0</strong><em>Commission base</em></article>
+                <article class="metric-card"><small>Restaurant Commission</small><strong id="summaryCommission">₹0</strong><em>Per-order configured rate</em></article>
+                <article class="metric-card accent-card"><small>Restaurant Payable</small><strong id="summaryRestaurantPayable">₹0</strong><em>Including adjustments</em></article>
+                <article class="metric-card"><small>Delivery Fees</small><strong id="summaryDeliveryFees">₹0</strong><em>Collected from customers</em></article>
+                <article class="metric-card"><small>Platform Fees</small><strong id="summaryPlatformFees">₹0</strong><em>Collected from customers</em></article>
+                <article class="metric-card"><small>Rider Payable</small><strong id="summaryRiderPayable">₹0</strong><em>Excludes COD cash</em></article>
+                <article class="metric-card"><small>Net Company Earning</small><strong id="summaryCompanyEarning">₹0</strong><em>Commission + fees − company discounts − rider payout</em></article>
+            </div>
+        </section>
 
-            <!-- ORDER STATUS SECTION -->
-            <div class="analytics-section">
-                <h2 class="section-title">📋 Order Status Breakdown</h2>
-                <div class="stats-grid">
-                    <div class="stat-card small">
-                        <div class="stat-value" id="pendingOrders">0</div>
-                        <div class="stat-label">Pending</div>
-                    </div>
-                    <div class="stat-card small">
-                        <div class="stat-value" id="approvedOrders">0</div>
-                        <div class="stat-label">Approved</div>
-                    </div>
-                    <div class="stat-card small">
-                        <div class="stat-value" id="preparingOrders">0</div>
-                        <div class="stat-label">Preparing</div>
-                    </div>
-                    <div class="stat-card small">
-                        <div class="stat-value" id="readyOrders">0</div>
-                        <div class="stat-label">Ready For Pickup</div>
-                    </div>
-                    <div class="stat-card small">
-                        <div class="stat-value" id="riderAssignedOrders">0</div>
-                        <div class="stat-label">Rider Assigned</div>
-                    </div>
-                    <div class="stat-card small">
-                        <div class="stat-value" id="onWayOrders">0</div>
-                        <div class="stat-label">On The Way</div>
-                    </div>
-                    <div class="stat-card small">
-                        <div class="stat-value" id="completedOrders">0</div>
-                        <div class="stat-label">Completed</div>
-                    </div>
-                    <div class="stat-card small">
-                        <div class="stat-value" id="cancelledOrders">0</div>
-                        <div class="stat-label">Cancelled</div>
-                    </div>
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">PAYMENT COLLECTION</p>
+                    <h2>Customer payment split</h2>
+                </div>
+                <p class="section-note">Rider COD cash settlement remains on the COD Settlement page.</p>
+            </div>
+            <div class="metric-grid metric-grid-4">
+                <article class="metric-card"><small>COD Orders</small><strong id="paymentCodOrders">0</strong></article>
+                <article class="metric-card"><small>COD Collected</small><strong id="paymentCodAmount">₹0</strong></article>
+                <article class="metric-card"><small>Online Orders</small><strong id="paymentOnlineOrders">0</strong></article>
+                <article class="metric-card"><small>Online Collected</small><strong id="paymentOnlineAmount">₹0</strong></article>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">ORDER-WISE FINANCIAL REPORT</p>
+                    <h2>Delivered order ledger</h2>
+                </div>
+                <div class="section-actions">
+                    <input id="orderReportSearch" class="search-input" type="search" placeholder="Search order / restaurant / rider">
+                    <button id="exportOrdersBtn" class="btn btn-secondary" type="button">Export Excel</button>
                 </div>
             </div>
-
-            <!-- RESTAURANT & RIDER STATS -->
-            <div class="analytics-section">
-                <h2 class="section-title">🏪 Restaurant & Riders Overview</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalRestaurants">0</div>
-                        <div class="stat-label">Total Restaurants</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="activeRestaurants">0</div>
-                        <div class="stat-label">Active Restaurants</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalRiders">0</div>
-                        <div class="stat-label">Total Riders</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="onlineRiders">0</div>
-                        <div class="stat-label">Online Riders</div>
-                    </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order</th><th>Date</th><th>Restaurant</th><th>Rider</th>
+                            <th>Item total</th><th>Packaging</th><th>Commission</th>
+                            <th>Restaurant payable</th><th>Rider payable</th><th>Payment</th>
+                            <th>Adjustments</th><th>Settlement</th><th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderReportBody"></tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <span id="orderReportRange">0 records</span>
+                <div class="pagination">
+                    <label>Rows
+                        <select id="orderPageSize"><option>25</option><option selected>50</option><option>100</option><option>200</option></select>
+                    </label>
+                    <button id="orderPrevBtn" class="icon-btn" type="button">‹</button>
+                    <span id="orderPageLabel">1 / 1</span>
+                    <button id="orderNextBtn" class="icon-btn" type="button">›</button>
                 </div>
             </div>
+        </section>
 
-            <!-- REVENUE ANALYTICS -->
-            <div class="analytics-section">
-                <h2 class="section-title">💰 Revenue Analytics</h2>
-                <div class="chart-buttons">
-                    <button class="chart-btn active" data-chart="dailyRevenue">Daily</button>
-                    <button class="chart-btn" data-chart="weeklyRevenue">Weekly</button>
-                    <button class="chart-btn" data-chart="monthlyRevenue">Monthly</button>
+        <section class="split-grid">
+            <article class="panel">
+                <div class="section-heading">
+                    <div><p class="section-kicker">RESTAURANT PAYABLE SUMMARY</p><h2>Partner balances</h2></div>
+                    <button id="exportRestaurantsBtn" class="btn btn-secondary" type="button">Export</button>
                 </div>
-                <div class="chart-container">
-                    <canvas id="revenueChart"></canvas>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Restaurant</th><th>Orders</th><th>Sales</th><th>Commission</th><th>Adjustments</th><th>Payable</th></tr></thead>
+                        <tbody id="restaurantSummaryBody"></tbody>
+                    </table>
                 </div>
+            </article>
+            <article class="panel">
+                <div class="section-heading">
+                    <div><p class="section-kicker">RIDER EARNINGS SUMMARY</p><h2>Delivery partner balances</h2></div>
+                    <button id="exportRidersBtn" class="btn btn-secondary" type="button">Export</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Rider</th><th>Orders</th><th>Base + surge</th><th>Tip</th><th>Adjustments</th><th>Payable</th></tr></thead>
+                        <tbody id="riderSummaryBody"></tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <section class="panel settlement-panel" id="settlementWorkspace">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">SETTLEMENT WORKSPACE</p>
+                    <h2>Create an auditable settlement</h2>
+                </div>
+                <span class="badge badge-neutral">Draft → Finalized → Paid</span>
             </div>
 
-            <!-- ORDER ANALYTICS -->
-            <div class="analytics-section">
-                <h2 class="section-title">📦 Order Analytics</h2>
-                <div class="chart-buttons">
-                    <button class="chart-btn active" data-chart="dailyOrders">Daily</button>
-                    <button class="chart-btn" data-chart="weeklyOrders">Weekly</button>
-                    <button class="chart-btn" data-chart="monthlyOrders">Monthly</button>
-                </div>
-                <div class="chart-container">
-                    <canvas id="ordersChart"></canvas>
-                </div>
+            <div class="primary-tabs" role="tablist">
+                <button class="tab-btn active" data-main-tab="RESTAURANT" type="button">Restaurant</button>
+                <button class="tab-btn" data-main-tab="RIDER" type="button">Rider</button>
+                <button class="tab-btn" data-main-tab="HISTORY" type="button">Settlement History</button>
             </div>
 
-            <!-- PAYMENT ANALYTICS -->
-            <div class="analytics-section">
-                <h2 class="section-title">💳 Payment Analytics</h2>
-                <div class="payment-grid">
-                    <div class="payment-card">
-                        <div class="payment-stat">
-                            <div class="payment-count" id="codOrders">0</div>
-                            <div class="payment-label">COD Orders</div>
-                        </div>
-                    </div>
-                    <div class="payment-card">
-                        <div class="payment-stat">
-                            <div class="payment-count" id="onlineOrders">0</div>
-                            <div class="payment-label">Online Payment Orders</div>
-                        </div>
-                    </div>
-                    <div class="payment-card">
-                        <div class="payment-stat">
-                            <div class="payment-count" id="codRevenue">₹0</div>
-                            <div class="payment-label">COD Revenue</div>
-                        </div>
-                    </div>
-                    <div class="payment-card">
-                        <div class="payment-stat">
-                            <div class="payment-count" id="onlineRevenue">₹0</div>
-                            <div class="payment-label">Online Revenue</div>
-                        </div>
-                    </div>
+            <div id="settlementBuilder">
+                <div class="workspace-controls">
+                    <label class="field">
+                        <span id="beneficiaryLabel">Restaurant</span>
+                        <select id="settlementBeneficiary"><option value="">Select restaurant</option></select>
+                    </label>
+                    <label class="field"><span>From</span><input id="settlementFromDate" type="date"></label>
+                    <label class="field"><span>To</span><input id="settlementToDate" type="date"></label>
+                    <label class="field grow"><span>Order search</span><input id="settlementOrderSearch" type="search" placeholder="Order ID"></label>
+                    <button id="loadSettlementBtn" class="btn btn-primary" type="button">Load eligible orders</button>
+                    <button id="openAdjustmentBtn" class="btn btn-secondary" type="button">+ Add adjustment</button>
                 </div>
-            </div>
 
-            <!-- ZONE ANALYTICS -->
-            <div class="analytics-section">
-                <h2 class="section-title">🗺️ Zone Analytics</h2>
-                <div class="zone-grid">
-                    <div class="zone-card">
-                        <div class="zone-icon">🏙️</div>
-                        <div class="zone-name">Gandhidham</div>
-                        <div class="zone-count" id="gandhidhamOrders">0 Orders</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="zone-icon">🏙️</div>
-                        <div class="zone-name">Adipur</div>
-                        <div class="zone-count" id="adipurOrders">0 Orders</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="zone-icon">🏙️</div>
-                        <div class="zone-name">Anjar</div>
-                        <div class="zone-count" id="anjarOrders">0 Orders</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="zone-icon">🏙️</div>
-                        <div class="zone-name">Bhuj</div>
-                        <div class="zone-count" id="bhujOrders">0 Orders</div>
-                    </div>
+                <div class="secondary-tabs" role="tablist">
+                    <button class="subtab-btn active" data-sub-tab="DELIVERED" type="button">Delivered · Unsettled <span id="deliveredEligibleCount">0</span></button>
+                    <button class="subtab-btn" data-sub-tab="CANCELLED" type="button">Cancelled · Adjustments <span id="cancelledEligibleCount">0</span></button>
+                    <button class="subtab-btn" data-sub-tab="POST" type="button">Post-settlement adjustments <span id="postEligibleCount">0</span></button>
                 </div>
-            </div>
 
-            <!-- TOP RESTAURANTS -->
-            <div class="analytics-section">
-                <h2 class="section-title">🍽️ Top Restaurants</h2>
-                <div class="top-restaurants-container">
-                    <div class="restaurant-tabs">
-                        <button class="restaurant-tab active" data-tab="orders">By Orders</button>
-                        <button class="restaurant-tab" data-tab="revenue">By Revenue</button>
-                    </div>
-                    <div class="table-container">
-                        <table id="topRestaurantsTable">
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Restaurant Name</th>
-                                    <th>Orders</th>
-                                    <th>Revenue</th>
-                                    <th>Avg Rating</th>
-                                </tr>
-                            </thead>
-                            <tbody id="topRestaurantsBody">
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="settlement-preview-grid">
+                    <article><small id="settlementBaseLabel">Base payout</small><strong id="settlementBaseTotal">₹0</strong></article>
+                    <article><small>Credits</small><strong class="positive" id="settlementCreditTotal">+₹0</strong></article>
+                    <article><small>Debits</small><strong class="negative" id="settlementDebitTotal">−₹0</strong></article>
+                    <article class="final-preview"><small>Final payout preview</small><strong id="settlementFinalTotal">₹0</strong></article>
+                    <article><small>Carry forward</small><strong id="settlementCarryForward">₹0</strong></article>
+                    <article><small>Selected entries</small><strong id="settlementSelectedCount">0</strong></article>
                 </div>
-            </div>
 
-            <!-- TOP RIDERS -->
-            <div class="analytics-section">
-                <h2 class="section-title">🏍️ Top Riders</h2>
-                <div class="table-container">
+                <div class="table-wrap">
                     <table>
                         <thead>
                             <tr>
-                                <th>Rank</th>
-                                <th>Rider Name</th>
-                                <th>Deliveries</th>
-                                <th>Earnings</th>
-                                <th>Avg Rating</th>
+                                <th><input id="selectAllSettlement" type="checkbox" aria-label="Select all"></th>
+                                <th>Order</th><th>Status</th><th>Date</th>
+                                <th id="settlementComponentColumn">Item + Packaging</th>
+                                <th id="settlementDeductionColumn">Commission</th>
+                                <th id="basePayoutColumn">Base payout</th>
+                                <th>Credits</th><th>Debits</th><th>Final</th><th>Latest remark</th><th>Action</th>
                             </tr>
                         </thead>
-                        <tbody id="topRidersBody">
-                        </tbody>
+                        <tbody id="settlementEntriesBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="settlement-footer">
+                    <label class="field grow"><span>Overall settlement remark</span><textarea id="settlementOverallRemark" rows="2" placeholder="Optional note for this settlement"></textarea></label>
+                    <div class="footer-actions">
+                        <button id="saveDraftBtn" class="btn btn-secondary" type="button">Save draft</button>
+                        <button id="finalizeSettlementBtn" class="btn btn-success" type="button">Finalize settlement</button>
+                    </div>
+                </div>
+                <p class="helper-text">A cancelled order has ₹0 base payout. Compensation must be added as a Credit, preventing double payment.</p>
+            </div>
+
+            <div id="settlementHistoryView" class="hidden">
+                <div class="history-toolbar">
+                    <input id="historySearch" class="search-input" type="search" placeholder="Search settlement / partner / reference">
+                    <select id="historyStatusFilter">
+                        <option value="">All statuses</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="FINALIZED">Finalized</option>
+                        <option value="PAID">Paid</option>
+                    </select>
+                    <button id="exportHistoryBtn" class="btn btn-secondary" type="button">Export history</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Settlement ID</th><th>Partner</th><th>Type</th><th>Period</th><th>Orders</th><th>Final payout</th><th>Status</th><th>Paid reference</th><th>Action</th></tr></thead>
+                        <tbody id="settlementHistoryBody"></tbody>
                     </table>
                 </div>
             </div>
+        </section>
 
-            <!-- COUPON ANALYTICS -->
-            <div class="analytics-section">
-                <h2 class="section-title">🎁 Coupon Analytics</h2>
-                <div class="coupon-grid">
-                    <div class="coupon-card">
-                        <div class="coupon-stat">
-                            <div class="coupon-count" id="totalCouponsUsed">0</div>
-                            <div class="coupon-label">Total Coupons Used</div>
-                        </div>
-                    </div>
-                    <div class="coupon-card">
-                        <div class="coupon-stat">
-                            <div class="coupon-count" id="totalDiscountGiven">₹0</div>
-                            <div class="coupon-label">Total Discount Given</div>
-                        </div>
-                    </div>
-                    <div class="coupon-card">
-                        <div class="coupon-stat">
-                            <div class="coupon-code" id="mostUsedCoupon">-</div>
-                            <div class="coupon-label">Most Used Coupon</div>
-                        </div>
-                    </div>
+        <footer class="page-footer">
+            Financial records are append-only. Corrections create a reversing ledger entry with a mandatory remark.
+        </footer>
+    </main>
+
+    <div id="adjustmentModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="adjustmentModalTitle">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div><p class="section-kicker">LEDGER ENTRY</p><h2 id="adjustmentModalTitle">Add order adjustment</h2></div>
+                <button class="modal-close" data-close-modal="adjustmentModal" type="button">×</button>
+            </div>
+            <form id="adjustmentForm">
+                <input id="adjustmentReverseId" type="hidden">
+                <div class="form-grid">
+                    <label class="field field-span-2"><span>Order ID</span><input id="adjustmentOrderId" required placeholder="Enter exact order ID"></label>
+                    <label class="field"><span>Beneficiary</span>
+                        <select id="adjustmentBeneficiaryType" required><option value="RESTAURANT">Restaurant</option><option value="RIDER">Rider</option></select>
+                    </label>
+                    <label class="field"><span>Direction</span>
+                        <select id="adjustmentDirection" required><option value="CREDIT">Credit (+)</option><option value="DEBIT">Debit (−)</option></select>
+                    </label>
+                    <label class="field"><span>Adjustment type</span>
+                        <select id="adjustmentType" required>
+                            <option value="CANCELLED_COMPENSATION">Cancelled order compensation</option>
+                            <option value="PENALTY">Penalty</option>
+                            <option value="BONUS">Bonus / incentive</option>
+                            <option value="ORDER_CORRECTION">Order correction</option>
+                            <option value="QUALITY_COMPENSATION">Quality compensation</option>
+                            <option value="OTHER">Other</option>
+                            <option value="REVERSAL">Reversal</option>
+                        </select>
+                    </label>
+                    <label class="field"><span>Amount</span><input id="adjustmentAmount" type="number" min="0.01" step="0.01" required placeholder="0.00"></label>
+                    <label class="field field-span-2"><span>Mandatory remark</span><textarea id="adjustmentRemark" rows="3" minlength="3" required placeholder="Why is this credit/debit being added?"></textarea></label>
                 </div>
-            </div>
-            <!-- PROFIT ANALYTICS -->
-
-<div class="analytics-section">
-
-    <h2 class="section-title">
-        💰 Profit Analytics
-    </h2>
-
-    <div class="stats-grid">
-
-        <div class="stat-card">
-            <div
-                class="stat-value"
-                id="totalProfit"
-            >
-                ₹0
-            </div>
-
-            <div class="stat-label">
-                Total Profit
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div
-                class="stat-value"
-                id="todayProfit"
-            >
-                ₹0
-            </div>
-
-            <div class="stat-label">
-                Today's Profit
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div
-                class="stat-value"
-                id="restaurantPayout"
-            >
-                ₹0
-            </div>
-
-            <div class="stat-label">
-                Restaurant Payout
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div
-                class="stat-value"
-                id="riderExpense"
-            >
-                ₹0
-            </div>
-
-            <div class="stat-label">
-                Rider Expense
-            </div>
-        </div>
-
-    </div>
-
-</div>
-            <!-- COMMISSION ANALYTICS -->
-            <div class="analytics-section">
-                <h2 class="section-title">💼 Commission Analytics</h2>
-                <div class="commission-grid">
-                    <div class="commission-card">
-                        <div class="commission-stat">
-                            <div class="commission-amount" id="restaurantCommission">₹0</div>
-                            <div class="commission-label">Restaurant Commission</div>
-                        </div>
-                    </div>
-                    <div class="commission-card">
-                        <div class="commission-stat">
-                            <div class="commission-amount" id="deliveryFees">₹0</div>
-                            <div class="commission-label">Delivery Fees Collected</div>
-                        </div>
-                    </div>
-                    <div class="commission-card">
-                        <div class="commission-stat">
-                            <div class="commission-amount" id="platformFees">₹0</div>
-                            <div class="commission-label">Platform Fees Collected</div>
-                        </div>
-                    </div>
+                <div id="adjustmentOrderPreview" class="inline-alert hidden"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-ghost" data-close-modal="adjustmentModal" type="button">Cancel</button>
+                    <button id="saveAdjustmentBtn" class="btn btn-primary" type="submit">Add ledger entry</button>
                 </div>
-            </div>
-            <!-- ORDER PROFIT TABLE -->
-
-<div class="analytics-section">
-
-    <h2 class="section-title">
-        📋 Order Profit Analytics
-    </h2>
-    <div style="
-display:flex;
-gap:10px;
-margin:15px 0;
-">
-
-<select
-id="restaurantFilter"
-style="
-padding:10px;
-min-width:250px;
-"
->
-
-<option value="ALL">
-All Restaurants
-</option>
-
-</select>
-
-<select
-id="riderFilter"
-style="
-padding:10px;
-min-width:250px;
-"
->
-
-<option value="ALL">
-All Riders
-</option>
-
-</select>
-<select
-id="dateFilter"
-style="
-padding:10px;
-min-width:200px;
-"
->
-
-<option value="ALL">
-All Dates
-</option>
-
-<option value="TODAY">
-Today
-</option>
-
-<option value="YESTERDAY">
-Yesterday
-</option>
-
-<option value="LAST7">
-Last 7 Days
-</option>
-
-<option value="MONTH">
-This Month
-</option>
-
-<option value="CUSTOM">
-Custom Range
-</option>
-
-</select>
-
-<input
-type="date"
-id="fromDate"
-style="
-display:none;
-padding:10px;
-"
->
-
-<input
-type="date"
-id="toDate"
-style="
-display:none;
-padding:10px;
-"
->
-
-<button
-id="applyDateBtn"
-style="
-display:none;
-padding:10px 15px;
-"
->
-Apply
-</button>
-
-</div>
-    <button
-    id="exportExcelBtn"
-    style="
-    background:red;
-    color:white;
-    padding:15px;
-    font-size:20px;
-    display:block;
-    margin:20px 0;
-    "
->
-📥 EXPORT EXCEL TEST
-</button>
-
-    <div class="table-container">
-
-        <table>
-
-            <thead>
-
-                <tr>
-
-                    <th>Order ID</th>
-<th>Date</th>
-<th>Restaurant ID</th>
-<th>Restaurant Name</th>
-
-<th>Item Total</th>
-<th>Packaging</th>
-<th>Delivery</th>
-<th>Platform</th>
-
-<th>GST</th>
-<th>Discount</th>
-<th>Tip</th>
-
-<th>Grand Total</th>
-
-<th>Commission %</th>
-<th>Commission Amt</th>
-
-<th>Payout</th>
-
-<th>Profit</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="profitTableBody">
-
-            </tbody>
-
-        </table>
-        <div
-style="
-display:flex;
-justify-content:center;
-align-items:center;
-gap:15px;
-padding:20px;
-"
->
-
-<button
-id="profitPrevBtn"
->
-⬅ Prev
-</button>
-
-<span
-id="profitPageInfo"
->
-Page 1
-</span>
-
-<button
-id="profitNextBtn"
->
-Next ➡
-</button>
-
-</div>
-
-    </div>
-
-</div>
-<div class="analytics-section">
-
-    <h2 class="section-title">
-        🏪 Restaurant Settlement Report
-    </h2>
-
-    <div class="table-container">
-
-        <table>
-
-            <thead>
-
-                <tr>
-
-                    <th>Restaurant</th>
-
-                    <th>Orders</th>
-
-                    <th>Sales</th>
-
-                    <th>Commission</th>
-
-                    <th>Payout</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="restaurantProfitBody">
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
-<div class="analytics-section">
-
-    <h2 class="section-title">
-        🏍 Rider Settlement Report
-    </h2>
-
-    <div class="table-container">
-
-        <table>
-
-            <thead>
-
-                <tr>
-
-                    <th>Rider</th>
-
-                    <th>Deliveries</th>
-
-                    <th>Total Earnings</th>
-
-                    <th>Avg Per Order</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="riderSettlementBody">
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
-            <!-- RECENT ACTIVITY -->
-            <div class="analytics-section">
-                <h2 class="section-title">📝 Recent Activity</h2>
-                <div class="activity-tabs">
-                    <button class="activity-tab active" data-activity="orders">Latest Orders</button>
-                    <button class="activity-tab" data-activity="restaurants">New Restaurants</button>
-                    <button class="activity-tab" data-activity="riders">New Riders</button>
-                </div>
-                <div class="activity-list" id="activityList">
-                    <div class="activity-item">
-                        <div class="activity-icon">📦</div>
-                        <div class="activity-content">
-                            <div class="activity-title">No recent activity</div>
-                            <div class="activity-time">-</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+            </form>
         </div>
     </div>
+
+    <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
+        <div class="modal-card modal-card-wide">
+            <div class="modal-header">
+                <div><p class="section-kicker">AUDIT TRAIL</p><h2 id="detailModalTitle">Order details</h2></div>
+                <button class="modal-close" data-close-modal="detailModal" type="button">×</button>
+            </div>
+            <div id="detailModalContent"></div>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div><p class="section-kicker">PAYMENT CONFIRMATION</p><h2 id="paymentModalTitle">Mark settlement paid</h2></div>
+                <button class="modal-close" data-close-modal="paymentModal" type="button">×</button>
+            </div>
+            <form id="paymentForm">
+                <input id="paymentSettlementId" type="hidden">
+                <div class="form-grid">
+                    <label class="field"><span>Payment date</span><input id="paymentDate" type="date" required></label>
+                    <label class="field"><span>Reference / UTR</span><input id="paymentReference" required minlength="3" placeholder="Bank reference"></label>
+                    <label class="field field-span-2"><span>Remark</span><textarea id="paymentRemark" rows="2" placeholder="Optional payment note"></textarea></label>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-ghost" data-close-modal="paymentModal" type="button">Cancel</button>
+                    <button class="btn btn-success" type="submit">Confirm paid</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+    <div id="pageLoader" class="page-loader"><span class="spinner"></span><strong>Loading finance data…</strong></div>
 
     <script type="module" src="analytics.js"></script>
 </body>
-
 </html>

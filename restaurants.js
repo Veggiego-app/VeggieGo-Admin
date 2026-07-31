@@ -257,6 +257,18 @@ ${r.zone || "-"}
 <td>
 
 <span
+class="commission-badge ${hasCommissionPercent(r.commissionPercent) ? "commission-set" : "commission-not-set"}"
+>
+
+${formatCommissionPercent(r.commissionPercent)}
+
+</span>
+
+</td>
+
+<td>
+
+<span
 class="status-badge-table"
 
 style="
@@ -964,6 +976,39 @@ async function() {
         button.innerText =
             "REJECT"
     }
+}
+
+function hasCommissionPercent(value) {
+
+    if (
+        value === null
+        ||
+        value === undefined
+        ||
+        value === ""
+    ) {
+        return false
+    }
+
+    const commissionPercent =
+        Number(value)
+
+    return (
+        Number.isFinite(commissionPercent)
+        &&
+        commissionPercent >= 0
+        &&
+        commissionPercent <= 100
+    )
+}
+
+function formatCommissionPercent(value) {
+
+    if (!hasCommissionPercent(value)) {
+        return "NOT SET"
+    }
+
+    return `${Number(value)}%`
 }
 
 function getColor(status) {

@@ -9,9 +9,11 @@ import {
     doc,
     updateDoc,
     onSnapshot,
-    
+    getDoc,
     getDocs,
-    collection
+    collection,
+    writeBatch,
+    arrayUnion
 
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
@@ -45,6 +47,57 @@ const ref =
         "orders",
         orderId
     )
+
+const ORDER_STATUS_FLOW = [
+    "PENDING",
+    "APPROVED",
+    "PREPARING",
+    "READY_FOR_PICKUP",
+    "RIDER_ASSIGNED",
+    "RIDER_ACCEPTED",
+    "REACHED_RESTAURANT",
+    "PICKED_UP",
+    "OUT_FOR_DELIVERY",
+    "DELIVERED"
+]
+
+const ORDER_STATUS_DESCRIPTIONS = {
+    PENDING:
+        "Order मिला है, लेकिन अभी restaurant processing शुरू नहीं हुई है।",
+
+    APPROVED:
+        "Order admin ने approve कर दिया है। अब restaurant इसे process कर सकता है।",
+
+    PREPARING:
+        "Restaurant order तैयार कर रहा है। अभी pickup नहीं किया जा सकता।",
+
+    READY_FOR_PICKUP:
+        "Order तैयार है और rider pickup कर सकता है। मौजूदा rider अपने-आप नहीं हटेगा।",
+
+    RIDER_ASSIGNED:
+        "Rider को order request भेज दी गई है। Rider का accept या reject बाकी है।",
+
+    RIDER_ACCEPTED:
+        "Rider ने order accept कर लिया है और restaurant की तरफ जा रहा है।",
+
+    REACHED_RESTAURANT:
+        "Rider restaurant location पर पहुँच गया है और order लेने का इंतजार कर रहा है।",
+
+    PICKED_UP:
+        "Rider ने restaurant से order प्राप्त कर लिया है।",
+
+    OUT_FOR_DELIVERY:
+        "Rider customer की location पर order deliver करने जा रहा है।",
+
+    DELIVERED:
+        "Order customer को मिल चुका है। Order complete होगा और rider active delivery से free होगा।",
+
+    CANCELLED:
+        "Order बंद हो जाएगा और आगे process नहीं होगा। Cancel reason जरूरी है।",
+
+    CUSTOMER_CANCELLED:
+        "Customer ने order cancel किया है। इसे normal status change से नहीं खोला जा सकता।"
+}
 
 // REALTIME
 
@@ -254,6 +307,50 @@ class="location-btn"
 <p>
 📞 ${order.riderPhone || "-"}
 </p>
+
+${
+String(order.status || "").toUpperCase() === "DELIVERED"
+
+?
+
+`
+<p>
+✅ Order Delivered
+</p>
+`
+
+:
+
+`
+<button
+id="riderActionBtn"
+class="action-btn"
+>
+
+${
+order.riderId
+
+?
+
+"🔄 CHANGE RIDER"
+
+:
+
+"🛵 ASSIGN RIDER"
+}
+
+</button>
+
+<p
+id="riderActionMessage"
+style="
+font-size:12px;
+margin-top:8px;
+"
+>
+</p>
+`
+}
 
 </div>
 
@@ -745,45 +842,6 @@ id="changeStatusBtn"
 
 </button>
 
-<div
-class="status-dropdown"
-id="statusDropdown"
->
-
-<div class="status-option">
-PENDING
-</div>
-
-<div class="status-option">
-APPROVED
-</div>
-
-<div class="status-option">
-PREPARING
-</div>
-
-<div class="status-option">
-READY_FOR_PICKUP
-</div>
-
-<div class="status-option">
-RIDER_ASSIGNED
-</div>
-
-<div class="status-option">
-OUT_FOR_DELIVERY
-</div>
-
-<div class="status-option">
-DELIVERED
-</div>
-
-<div class="status-option">
-CANCELLED
-</div>
-
-</div>
-
 </div>
 
 <button
@@ -844,7 +902,105 @@ id="saveNoteBtn"
 ${buildPrintInvoice(order)}
 
 `
+// RIDER ASSIGN / CHANGE BUTTON
 
+const riderActionBtn =
+    document.getElementById(
+        "riderActionBtn"
+    )
+
+const riderActionMessage =
+    document.getElementById(
+        "riderActionMessage"
+    )
+
+if (riderActionBtn) {
+
+    const currentStatus =
+        String(
+            order.status || ""
+        ).toUpperCase()
+
+    const riderActionAllowedStatuses = [
+
+        "PREPARING",
+
+        "READY_FOR_PICKUP",
+
+        "RIDER_ASSIGNED",
+
+        "RIDER_ACCEPTED",
+
+        "REACHED_RESTAURANT",
+
+        "PICKED_UP",
+
+        "OUT_FOR_DELIVERY"
+
+    ]
+
+    const riderActionAllowed =
+        riderActionAllowedStatuses
+            .includes(
+                currentStatus
+            )
+
+    if (!riderActionAllowed) {
+
+        riderActionBtn.disabled =
+            true
+
+        riderActionBtn.style.opacity =
+            "0.6"
+
+        riderActionBtn.style.cursor =
+            "not-allowed"
+
+        if (riderActionMessage) {
+
+            riderActionMessage.innerText =
+
+                currentStatus === "PENDING"
+
+                ||
+
+                currentStatus === "APPROVED"
+
+                ?
+
+                "Rider can be assigned after PREPARING status."
+
+                :
+
+                "Rider assignment is not available in this status."
+        }
+
+    } else {
+
+        if (riderActionMessage) {
+
+            riderActionMessage.innerText =
+
+                order.riderId
+
+                ?
+
+                "Current rider will remain active until the new rider accepts."
+
+                :
+
+                "Select an online approved rider."
+        }
+
+        riderActionBtn.onclick =
+            async () => {
+
+                await openRiderSelectionModal(
+                    order
+                )
+            }
+    }
+}
     // CALL
 
     const callBtn =
@@ -1029,281 +1185,2300 @@ async () => {
 }
     }
 
-    // CHANGE STATUS DROPDOWN
+    // SAFE STATUS CHANGE MODAL
 
 const changeStatusBtn =
     document.getElementById(
         "changeStatusBtn"
     )
 
-const statusDropdown =
-    document.getElementById(
-        "statusDropdown"
-    )
+if (changeStatusBtn) {
 
-if (
-    changeStatusBtn &&
-    statusDropdown
-) {
-
-    // OPEN CLOSE
-
-    changeStatusBtn.onclick = () => {
-
-    statusDropdown.classList.remove(
-        "dropdown-up",
-        "dropdown-down"
-    )
-
-    const rect =
-        changeStatusBtn.getBoundingClientRect()
-
-    const dropdownHeight = 320
-
-    const spaceBelow =
-        window.innerHeight - rect.bottom
-
-    if (spaceBelow >= dropdownHeight) {
-
-        statusDropdown.classList.add(
-            "dropdown-down"
+    const currentStatus =
+        normalizeOrderStatus(
+            order.status
         )
+
+    if (
+        currentStatus ===
+        "CUSTOMER_CANCELLED"
+    ) {
+
+        changeStatusBtn.innerHTML =
+            "❌ CUSTOMER CANCELLED"
+
+        changeStatusBtn.disabled =
+            true
+
+        changeStatusBtn.style.opacity =
+            "0.6"
+
+        changeStatusBtn.style.cursor =
+            "not-allowed"
+
+        changeStatusBtn.title =
+            ORDER_STATUS_DESCRIPTIONS
+                .CUSTOMER_CANCELLED
 
     } else {
 
-        statusDropdown.classList.add(
-            "dropdown-up"
-        )
-    }
+        changeStatusBtn.onclick =
+            () => {
 
-    statusDropdown.classList.toggle(
-        "show-dropdown"
+                openStatusChangeModal(
+                    order
+                )
+            }
+    }
+}
+
+function normalizeOrderStatus(value) {
+
+    return String(
+        value || "PENDING"
+    )
+        .trim()
+        .toUpperCase()
+}
+
+function formatOrderStatusLabel(value) {
+
+    return normalizeOrderStatus(
+        value
+    ).replaceAll(
+        "_",
+        " "
     )
 }
 
-    // OPTIONS
-if (
-    order.status ===
-    "CUSTOMER_CANCELLED"
+function getStatusDescription(status) {
+
+    return (
+        ORDER_STATUS_DESCRIPTIONS[
+            normalizeOrderStatus(
+                status
+            )
+        ]
+
+        ||
+
+        "इस status की जानकारी उपलब्ध नहीं है।"
+    )
+}
+
+function getNormalNextStatus(
+    currentStatus
 ) {
 
-    changeStatusBtn.innerHTML =
-        "❌ CUSTOMER CANCELLED"
-
-    changeStatusBtn.disabled = true
-
-    changeStatusBtn.style.opacity = "0.6"
-
-    changeStatusBtn.style.cursor =
-        "not-allowed"
-
-    return
-}
-    const options =
-        document.querySelectorAll(
-            ".status-option"
+    const currentIndex =
+        ORDER_STATUS_FLOW.indexOf(
+            normalizeOrderStatus(
+                currentStatus
+            )
         )
-
-    options.forEach(option => {
-
-        option.onclick =
-        async () => {
-
-            const finalStatus =
-                option.innerText.trim()
-
-            const updateData = {
-
-                status:
-                    finalStatus,
-
-                updatedAt:
-                    Date.now()
-            }
-            if (
-    finalStatus !== "CANCELLED"
-) {
-
-    updateData.cancelReason = ""
-
-    updateData.cancelledBy = ""
-
-    updateData.cancelledAt = null
-}
-            if (
-
-    order.status === "PENDING"
-
-    &&
-
-    finalStatus === "APPROVED"
-
-) {
-
-    let adminReason = prompt(
-
-        "Enter Approval Reason (Minimum 3 Characters)"
-
-    ) || ""
-
-    adminReason = adminReason.trim()
 
     if (
-
-        adminReason.length < 3
-
+        currentIndex < 0 ||
+        currentIndex >=
+            ORDER_STATUS_FLOW.length - 1
     ) {
 
-        alert(
-
-            "❌ Reason must be minimum 3 characters"
-
-        )
-
-        return
+        return ""
     }
 
-    updateData.statusChangedBy =
-    "ADMIN"
-
-updateData.adminStatusReason =
-    adminReason
-
-updateData.adminStatusTarget =
-    finalStatus
-
-updateData.statusChangedAt =
-    Date.now()
+    return ORDER_STATUS_FLOW[
+        currentIndex + 1
+    ]
 }
-            // 🔥 FREE RIDER AFTER DELIVERY
 
-if (
-    finalStatus ===
-    "DELIVERED"
+function getBackwardStatuses(
+    currentStatus,
+    currentOrder
 ) {
 
-    const riderId =
-        order.riderId || ""
+    const normalizedStatus =
+        normalizeOrderStatus(
+            currentStatus
+        )
 
-    if (riderId) {
+    if (
+        normalizedStatus ===
+        "CANCELLED"
+    ) {
 
-        await updateDoc(
+        const statusBeforeCancel =
+            normalizeOrderStatus(
+                currentOrder
+                    .statusBeforeCancel ||
+                currentOrder
+                    .previousStatus ||
+                ""
+            )
 
+        const statuses = [
+            statusBeforeCancel,
+            ...ORDER_STATUS_FLOW
+                .slice()
+                .reverse()
+        ]
+            .filter(
+                status =>
+                    status &&
+                    status !==
+                        "CANCELLED"
+            )
+
+        return Array.from(
+            new Set(statuses)
+        )
+    }
+
+    const currentIndex =
+        ORDER_STATUS_FLOW.indexOf(
+            normalizedStatus
+        )
+
+    if (currentIndex <= 0) {
+
+        return []
+    }
+
+    return ORDER_STATUS_FLOW
+        .slice(
+            0,
+            currentIndex
+        )
+        .reverse()
+}
+
+function getRequiredReasonLength(
+    currentStatus,
+    targetStatus,
+    mode
+) {
+
+    const current =
+        normalizeOrderStatus(
+            currentStatus
+        )
+
+    const target =
+        normalizeOrderStatus(
+            targetStatus
+        )
+
+    if (mode === "EMERGENCY") {
+
+        return 20
+    }
+
+    if (
+        mode === "BACKWARD" ||
+        current === "DELIVERED" ||
+        current === "CANCELLED" ||
+        target === "DELIVERED" ||
+        target === "CANCELLED"
+    ) {
+
+        return 10
+    }
+
+    if (
+        current === "PENDING" &&
+        target === "APPROVED"
+    ) {
+
+        return 3
+    }
+
+    return 0
+}
+
+function isActiveDeliveryStatus(status) {
+
+    return [
+        "PENDING",
+        "APPROVED",
+        "PREPARING",
+        "READY_FOR_PICKUP",
+        "RIDER_ASSIGNED",
+        "RIDER_ACCEPTED",
+        "REACHED_RESTAURANT",
+        "PICKED_UP",
+        "OUT_FOR_DELIVERY"
+    ].includes(
+        normalizeOrderStatus(
+            status
+        )
+    )
+}
+
+function isRiderAssignmentStatus(status) {
+
+    return [
+        "PREPARING",
+        "READY_FOR_PICKUP",
+        "RIDER_ASSIGNED",
+        "RIDER_ACCEPTED",
+        "REACHED_RESTAURANT",
+        "PICKED_UP",
+        "OUT_FOR_DELIVERY"
+    ].includes(
+        normalizeOrderStatus(
+            status
+        )
+    )
+}
+
+function ensureStatusModalStyles() {
+
+    if (
+        document.getElementById(
+            "orderStatusModalStyles"
+        )
+    ) return
+
+    const style =
+        document.createElement(
+            "style"
+        )
+
+    style.id =
+        "orderStatusModalStyles"
+
+    style.textContent = `
+        #orderStatusChangeModal {
+            position: fixed;
+            inset: 0;
+            z-index: 12000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(15, 23, 42, 0.72);
+        }
+
+        .order-status-modal-box {
+            width: min(820px, 100%);
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 18px;
+            color: #0f172a;
+            background: #ffffff;
+            box-shadow: 0 28px 80px rgba(15, 23, 42, 0.32);
+        }
+
+        .order-status-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 20px 22px 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .order-status-modal-header h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 22px;
+        }
+
+        .order-status-modal-header p {
+            margin: 6px 0 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .order-status-close {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 10px;
+            color: #475569;
+            background: #e2e8f0;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .order-status-modal-body {
+            overflow-y: auto;
+            padding: 18px 22px;
+        }
+
+        .status-current-next-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .status-info-card {
+            padding: 15px;
+            border: 1px solid #dbeafe;
+            border-radius: 13px;
+            background: #f8fafc;
+        }
+
+        .status-info-card.next {
+            border-color: #a7f3d0;
+            background: #f0fdf4;
+        }
+
+        .status-info-label {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .status-info-name {
+            margin-top: 7px;
+            color: #0f172a;
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .status-info-description {
+            margin-top: 7px;
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .status-modal-section {
+            margin-top: 18px;
+        }
+
+        .status-modal-section > label,
+        .status-modal-section > h3 {
+            display: block;
+            margin: 0 0 9px;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .status-mode-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(130px, 1fr));
+            gap: 9px;
+        }
+
+        .status-mode-btn {
+            min-height: 48px;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 11px;
+            color: #334155;
+            background: #f8fafc;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .status-mode-btn.active {
+            border-color: #7c3aed;
+            color: #ffffff;
+            background: #7c3aed;
+        }
+
+        .status-mode-btn.cancel-mode {
+            border-color: #fca5a5;
+            color: #b91c1c;
+            background: #fef2f2;
+        }
+
+        .status-mode-btn.emergency-mode {
+            border-color: #fdba74;
+            color: #c2410c;
+            background: #fff7ed;
+        }
+
+        .status-mode-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
+        #orderStatusChangeModal
+        .status-mode-btn:hover:not(:disabled):not(.active) {
+            color: #0f172a !important;
+            background: #eef2ff !important;
+        }
+
+        .status-target-select,
+        .status-reason-textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 11px;
+            color: #0f172a;
+            background: #ffffff;
+            box-sizing: border-box;
+            font: inherit;
+        }
+
+        #orderStatusChangeModal
+        .status-target-select option {
+            color: #0f172a;
+            background: #ffffff;
+        }
+
+        .status-target-select {
+            min-height: 45px;
+            padding: 10px 12px;
+            font-weight: 800;
+        }
+
+        .status-reason-textarea {
+            min-height: 92px;
+            padding: 12px;
+            resize: vertical;
+        }
+
+        .status-selected-description {
+            margin-top: 9px;
+            padding: 12px;
+            border-radius: 10px;
+            color: #1e3a8a;
+            background: #eff6ff;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .status-rider-actions {
+            display: grid;
+            gap: 9px;
+        }
+
+        .status-rider-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 11px;
+            cursor: pointer;
+            background: #ffffff;
+        }
+
+        .status-rider-option:has(input:checked) {
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
+
+        .status-rider-option input {
+            margin-top: 3px;
+        }
+
+        .status-rider-option strong {
+            display: block;
+            color: #0f172a;
+            font-size: 13px;
+        }
+
+        .status-rider-option span {
+            display: block;
+            margin-top: 3px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .status-effect-box {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border: 1px solid #fde68a;
+            border-radius: 11px;
+            color: #92400e;
+            background: #fffbeb;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .status-reason-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 6px;
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .status-emergency-confirm {
+            display: none;
+            align-items: flex-start;
+            gap: 9px;
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            color: #9a3412;
+            background: #fff7ed;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-emergency-confirm.show {
+            display: flex;
+        }
+
+        .order-status-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 15px 22px;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+        }
+
+        .status-modal-btn {
+            min-height: 42px;
+            padding: 10px 17px;
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 900;
+        }
+
+        .status-modal-btn.cancel {
+            color: #334155;
+            background: #e2e8f0;
+        }
+
+        .status-modal-btn.confirm {
+            color: #ffffff;
+            background: #16a34a;
+        }
+
+        .status-modal-btn.confirm.emergency {
+            background: #ea580c;
+        }
+
+        .status-modal-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
+        @media (max-width: 720px) {
+            .status-current-next-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-mode-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .order-status-modal-footer {
+                flex-wrap: wrap;
+            }
+
+            .status-modal-btn {
+                flex: 1;
+            }
+        }
+    `
+
+    document.head.appendChild(
+        style
+    )
+}
+
+function openStatusChangeModal(
+    currentOrder
+) {
+
+    ensureStatusModalStyles()
+
+    document
+        .getElementById(
+            "orderStatusChangeModal"
+        )
+        ?.remove()
+
+    const currentStatus =
+        normalizeOrderStatus(
+            currentOrder.status
+        )
+
+    const normalNextStatus =
+        getNormalNextStatus(
+            currentStatus
+        )
+
+    const backwardStatuses =
+        getBackwardStatuses(
+            currentStatus,
+            currentOrder
+        )
+
+    const defaultMode =
+        normalNextStatus
+
+        ?
+
+        "NORMAL_NEXT"
+
+        :
+
+        backwardStatuses.length
+
+        ?
+
+        "BACKWARD"
+
+        :
+
+        "EMERGENCY"
+
+    const modal =
+        document.createElement(
+            "div"
+        )
+
+    modal.id =
+        "orderStatusChangeModal"
+
+    modal.innerHTML = `
+        <div
+            class="order-status-modal-box"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="orderStatusModalTitle"
+        >
+            <div class="order-status-modal-header">
+                <div>
+                    <h2 id="orderStatusModalTitle">
+                        Change Order Status
+                    </h2>
+
+                    <p>
+                        Order:
+                        ${escapeStatusHtml(
+                            currentOrder.orderId ||
+                            orderId
+                        )}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    id="closeOrderStatusModal"
+                    class="order-status-close"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <div class="order-status-modal-body">
+                <div class="status-current-next-grid">
+                    <div class="status-info-card">
+                        <div class="status-info-label">
+                            Current Status
+                        </div>
+
+                        <div class="status-info-name">
+                            ${escapeStatusHtml(
+                                formatOrderStatusLabel(
+                                    currentStatus
+                                )
+                            )}
+                        </div>
+
+                        <div class="status-info-description">
+                            ${escapeStatusHtml(
+                                getStatusDescription(
+                                    currentStatus
+                                )
+                            )}
+                        </div>
+                    </div>
+
+                    <div class="status-info-card next">
+                        <div class="status-info-label">
+                            Normal Next Status
+                        </div>
+
+                        <div class="status-info-name">
+                            ${
+                                normalNextStatus
+
+                                ?
+
+                                escapeStatusHtml(
+                                    formatOrderStatusLabel(
+                                        normalNextStatus
+                                    )
+                                )
+
+                                :
+
+                                "No Next Step"
+                            }
+                        </div>
+
+                        <div class="status-info-description">
+                            ${
+                                normalNextStatus
+
+                                ?
+
+                                escapeStatusHtml(
+                                    getStatusDescription(
+                                        normalNextStatus
+                                    )
+                                )
+
+                                :
+
+                                "Normal sequence में आगे कोई status उपलब्ध नहीं है।"
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-modal-section">
+                    <h3>Change Type</h3>
+
+                    <div class="status-mode-grid">
+                        <button
+                            type="button"
+                            class="status-mode-btn"
+                            data-status-mode="NORMAL_NEXT"
+                            ${normalNextStatus ? "" : "disabled"}
+                        >
+                            Next Step
+                        </button>
+
+                        <button
+                            type="button"
+                            class="status-mode-btn"
+                            data-status-mode="BACKWARD"
+                            ${backwardStatuses.length ? "" : "disabled"}
+                        >
+                            Go Back
+                        </button>
+
+                        <button
+                            type="button"
+                            class="status-mode-btn cancel-mode"
+                            data-status-mode="CANCEL"
+                            ${currentStatus === "CANCELLED" ? "disabled" : ""}
+                        >
+                            Cancel Order
+                        </button>
+
+                        <button
+                            type="button"
+                            class="status-mode-btn emergency-mode"
+                            data-status-mode="EMERGENCY"
+                        >
+                            Emergency
+                        </button>
+                    </div>
+                </div>
+
+                <div class="status-modal-section">
+                    <label for="statusTargetSelect">
+                        Target Status
+                    </label>
+
+                    <select
+                        id="statusTargetSelect"
+                        class="status-target-select"
+                    ></select>
+
+                    <div
+                        id="selectedStatusDescription"
+                        class="status-selected-description"
+                    ></div>
+                </div>
+
+                <div
+                    id="statusRiderSection"
+                    class="status-modal-section"
+                >
+                    <h3>Rider Handling</h3>
+
+                    <div
+                        id="statusRiderActions"
+                        class="status-rider-actions"
+                    ></div>
+                </div>
+
+                <div
+                    id="statusChangeEffect"
+                    class="status-effect-box"
+                ></div>
+
+                <div class="status-modal-section">
+                    <label
+                        id="statusReasonLabel"
+                        for="statusChangeReason"
+                    >
+                        Reason
+                    </label>
+
+                    <textarea
+                        id="statusChangeReason"
+                        class="status-reason-textarea"
+                        placeholder="Status change का reason लिखें..."
+                    ></textarea>
+
+                    <div class="status-reason-footer">
+                        <span id="statusReasonHelp"></span>
+                        <span id="statusReasonCounter">0 characters</span>
+                    </div>
+
+                    <label
+                        id="statusEmergencyConfirm"
+                        class="status-emergency-confirm"
+                    >
+                        <input
+                            type="checkbox"
+                            id="statusEmergencyCheckbox"
+                        >
+
+                        <span>
+                            मैं समझता हूँ कि Emergency Override normal status sequence को bypass करेगा।
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="order-status-modal-footer">
+                <button
+                    type="button"
+                    id="cancelOrderStatusChange"
+                    class="status-modal-btn cancel"
+                >
+                    Close
+                </button>
+
+                <button
+                    type="button"
+                    id="confirmOrderStatusChange"
+                    class="status-modal-btn confirm"
+                >
+                    Confirm Status Change
+                </button>
+            </div>
+        </div>
+    `
+
+    document.body.appendChild(
+        modal
+    )
+
+    const targetSelect =
+        document.getElementById(
+            "statusTargetSelect"
+        )
+
+    const statusDescription =
+        document.getElementById(
+            "selectedStatusDescription"
+        )
+
+    const riderActions =
+        document.getElementById(
+            "statusRiderActions"
+        )
+
+    const riderSection =
+        document.getElementById(
+            "statusRiderSection"
+        )
+
+    const effectBox =
+        document.getElementById(
+            "statusChangeEffect"
+        )
+
+    const reasonInput =
+        document.getElementById(
+            "statusChangeReason"
+        )
+
+    const reasonLabel =
+        document.getElementById(
+            "statusReasonLabel"
+        )
+
+    const reasonHelp =
+        document.getElementById(
+            "statusReasonHelp"
+        )
+
+    const reasonCounter =
+        document.getElementById(
+            "statusReasonCounter"
+        )
+
+    const emergencyConfirm =
+        document.getElementById(
+            "statusEmergencyConfirm"
+        )
+
+    const emergencyCheckbox =
+        document.getElementById(
+            "statusEmergencyCheckbox"
+        )
+
+    const confirmButton =
+        document.getElementById(
+            "confirmOrderStatusChange"
+        )
+
+    let selectedMode =
+        defaultMode
+
+    let selectedRiderAction =
+        "KEEP"
+
+    const closeModal = () => {
+
+        modal.remove()
+    }
+
+    document
+        .getElementById(
+            "closeOrderStatusModal"
+        )
+        .onclick =
+            closeModal
+
+    document
+        .getElementById(
+            "cancelOrderStatusChange"
+        )
+        .onclick =
+            closeModal
+
+    modal.onclick = event => {
+
+        if (event.target === modal) {
+
+            closeModal()
+        }
+    }
+
+    function getTargetsForMode() {
+
+        switch (
+            selectedMode
+        ) {
+
+            case "NORMAL_NEXT":
+                return normalNextStatus
+                    ? [normalNextStatus]
+                    : []
+
+            case "BACKWARD":
+                return backwardStatuses
+
+            case "CANCEL":
+                return currentStatus ===
+                    "CANCELLED"
+                    ? []
+                    : ["CANCELLED"]
+
+            case "EMERGENCY":
+                return [
+                    ...ORDER_STATUS_FLOW,
+                    "CANCELLED"
+                ].filter(
+                    status =>
+                        status !==
+                        currentStatus
+                )
+
+            default:
+                return []
+        }
+    }
+
+    function renderTargetOptions() {
+
+        const targets =
+            getTargetsForMode()
+
+        targetSelect.innerHTML =
+            targets.map(
+                status => `
+                    <option value="${
+                        escapeStatusHtml(
+                            status
+                        )
+                    }">
+                        ${escapeStatusHtml(
+                            formatOrderStatusLabel(
+                                status
+                            )
+                        )}
+                    </option>
+                `
+            )
+            .join("")
+
+        targetSelect.disabled =
+            targets.length <= 1
+
+        selectedRiderAction =
+            "KEEP"
+
+        updateStatusModalPreview()
+    }
+
+    function renderRiderActions(
+        targetStatus
+    ) {
+
+        const target =
+            normalizeOrderStatus(
+                targetStatus
+            )
+
+        const targetIsTerminal =
+            target === "DELIVERED" ||
+            target === "CANCELLED"
+
+        if (targetIsTerminal) {
+
+            riderSection.style.display =
+                "block"
+
+            riderActions.innerHTML = `
+                <label class="status-rider-option">
+                    <input
+                        type="radio"
+                        name="statusRiderAction"
+                        value="KEEP"
+                        checked
+                    >
+
+                    <span>
+                        <strong>
+                            Keep Rider Details
+                        </strong>
+
+                        <span>
+                            Rider का नाम और delivery history order में रहेगी, लेकिन active delivery बंद होगी।
+                        </span>
+                    </span>
+                </label>
+            `
+
+            selectedRiderAction =
+                "KEEP"
+
+            return
+        }
+
+        const hasRider =
+            Boolean(
+                currentOrder.riderId
+            )
+
+        riderSection.style.display =
+            "block"
+
+        riderActions.innerHTML = `
+            <label class="status-rider-option">
+                <input
+                    type="radio"
+                    name="statusRiderAction"
+                    value="KEEP"
+                    checked
+                >
+
+                <span>
+                    <strong>
+                        Status Only — Keep Rider
+                    </strong>
+
+                    <span>
+                        केवल status बदलेगा। ${
+                            hasRider
+
+                            ?
+
+                            `${escapeStatusHtml(
+                                currentOrder.riderName ||
+                                "Current rider"
+                            )} order से नहीं हटेगा।`
+
+                            :
+
+                            "अभी कोई rider assigned नहीं है।"
+                        }
+                    </span>
+                </span>
+            </label>
+
+            ${
+                hasRider &&
+                (
+                    currentStatus ===
+                        "DELIVERED" ||
+                    currentStatus ===
+                        "CANCELLED"
+                ) &&
+                isRiderAssignmentStatus(
+                    target
+                )
+
+                ?
+
+                `
+                    <label class="status-rider-option">
+                        <input
+                            type="radio"
+                            name="statusRiderAction"
+                            value="SAME_RIDER"
+                        >
+
+                        <span>
+                            <strong>
+                                Resume With Same Rider
+                            </strong>
+
+                            <span>
+                                उसी rider को दोबारा active करके delivery resume होगी।
+                            </span>
+                        </span>
+                    </label>
+                `
+
+                :
+
+                ""
+            }
+
+            ${
+                isRiderAssignmentStatus(
+                    target
+                )
+
+                ?
+
+                `
+                    <label class="status-rider-option">
+                        <input
+                            type="radio"
+                            name="statusRiderAction"
+                            value="CHANGE_RIDER"
+                        >
+
+                        <span>
+                            <strong>
+                                Change / Assign Rider
+                            </strong>
+
+                            <span>
+                                Status save होने के बाद rider selection खुलेगा। Current rider नया rider accept होने तक रहेगा।
+                            </span>
+                        </span>
+                    </label>
+                `
+
+                :
+
+                ""
+            }
+
+            ${
+                hasRider
+
+                ?
+
+                `
+                    <label class="status-rider-option">
+                        <input
+                            type="radio"
+                            name="statusRiderAction"
+                            value="REMOVE_RIDER"
+                        >
+
+                        <span>
+                            <strong>
+                                Remove Rider / Send To All
+                            </strong>
+
+                            <span>
+                                Rider fields साफ होंगी। यह option चुनने पर ही rider हटेगा।
+                            </span>
+                        </span>
+                    </label>
+                `
+
+                :
+
+                ""
+            }
+        `
+
+        riderActions
+            .querySelectorAll(
+                'input[name="statusRiderAction"]'
+            )
+            .forEach(
+                input => {
+
+                    input.onchange =
+                        () => {
+
+                            selectedRiderAction =
+                                input.value
+
+                            updateEffectBox()
+                            validateStatusForm()
+                        }
+                }
+            )
+    }
+
+    function updateEffectBox() {
+
+        const targetStatus =
+            normalizeOrderStatus(
+                targetSelect.value
+            )
+
+        let effect =
+            "केवल selected status change होगा।"
+
+        if (
+            targetStatus ===
+            "READY_FOR_PICKUP"
+        ) {
+
+            effect =
+                "Order pickup के लिए ready माना जाएगा। Rider अपने-आप remove नहीं होगा।"
+        }
+
+        if (
+            targetStatus ===
+            "DELIVERED"
+        ) {
+
+            effect =
+                "Order complete होगा, rider active delivery से free होगा और rider details history में रहेंगी।"
+        }
+
+        if (
+            targetStatus ===
+            "CANCELLED"
+        ) {
+
+            effect =
+                "Order cancel होगा, active delivery बंद होगी और minimum 10 characters reason save होगा।"
+        }
+
+        if (
+            selectedMode ===
+            "BACKWARD"
+        ) {
+
+            effect +=
+                " यह backward change है; पुरानी status history delete नहीं होगी।"
+        }
+
+        if (
+            selectedMode ===
+            "EMERGENCY"
+        ) {
+
+            effect +=
+                " Emergency Override audit history में अलग से save होगा।"
+        }
+
+        if (
+            selectedRiderAction ===
+            "SAME_RIDER"
+        ) {
+
+            effect +=
+                " Same rider को active order पर वापस लगाया जाएगा।"
+        }
+
+        if (
+            selectedRiderAction ===
+            "CHANGE_RIDER"
+        ) {
+
+            effect +=
+                " Status save होने के बाद rider selection खुलेगा।"
+        }
+
+        if (
+            selectedRiderAction ===
+            "REMOVE_RIDER"
+        ) {
+
+            effect +=
+                " Current rider और pending rider request साफ होगी।"
+        }
+
+        effectBox.textContent =
+            effect
+    }
+
+    function validateStatusForm() {
+
+        const targetStatus =
+            normalizeOrderStatus(
+                targetSelect.value
+            )
+
+        const reason =
+            reasonInput.value.trim()
+
+        const minimumReasonLength =
+            getRequiredReasonLength(
+                currentStatus,
+                targetStatus,
+                selectedMode
+            )
+
+        const reasonIsValid =
+            minimumReasonLength === 0 ||
+            reason.length >=
+                minimumReasonLength
+
+        const emergencyIsValid =
+            selectedMode !==
+                "EMERGENCY" ||
+            emergencyCheckbox.checked
+
+        confirmButton.disabled =
+            !targetStatus ||
+            targetStatus ===
+                currentStatus ||
+            !reasonIsValid ||
+            !emergencyIsValid
+    }
+
+    function updateStatusModalPreview() {
+
+        const targetStatus =
+            normalizeOrderStatus(
+                targetSelect.value
+            )
+
+        statusDescription.textContent =
+            getStatusDescription(
+                targetStatus
+            )
+
+        const minimumReasonLength =
+            getRequiredReasonLength(
+                currentStatus,
+                targetStatus,
+                selectedMode
+            )
+
+        reasonLabel.textContent =
+            minimumReasonLength
+
+            ?
+
+            `Reason (Minimum ${
+                minimumReasonLength
+            } Characters)`
+
+            :
+
+            "Reason (Optional)"
+
+        reasonHelp.textContent =
+            minimumReasonLength
+
+            ?
+
+            `कम से कम ${
+                minimumReasonLength
+            } characters जरूरी हैं।`
+
+            :
+
+            "Normal next step के लिए reason optional है।"
+
+        emergencyConfirm
+            .classList
+            .toggle(
+                "show",
+                selectedMode ===
+                    "EMERGENCY"
+            )
+
+        confirmButton
+            .classList
+            .toggle(
+                "emergency",
+                selectedMode ===
+                    "EMERGENCY"
+            )
+
+        confirmButton.textContent =
+            selectedMode ===
+                "EMERGENCY"
+
+            ?
+
+            "Confirm Emergency Change"
+
+            :
+
+            "Confirm Status Change"
+
+        renderRiderActions(
+            targetStatus
+        )
+
+        updateEffectBox()
+        validateStatusForm()
+    }
+
+    modal
+        .querySelectorAll(
+            "[data-status-mode]"
+        )
+        .forEach(
+            modeButton => {
+
+                modeButton.onclick =
+                    () => {
+
+                        if (
+                            modeButton.disabled
+                        ) return
+
+                        selectedMode =
+                            modeButton.dataset
+                                .statusMode
+
+                        modal
+                            .querySelectorAll(
+                                "[data-status-mode]"
+                            )
+                            .forEach(
+                                button =>
+                                    button
+                                        .classList
+                                        .toggle(
+                                            "active",
+                                            button ===
+                                                modeButton
+                                        )
+                            )
+
+                        emergencyCheckbox.checked =
+                            false
+
+                        reasonInput.value =
+                            ""
+
+                        reasonCounter.textContent =
+                            "0 characters"
+
+                        renderTargetOptions()
+                    }
+            }
+        )
+
+    targetSelect.onchange =
+        () => {
+
+            selectedRiderAction =
+                "KEEP"
+
+            updateStatusModalPreview()
+        }
+
+    reasonInput.oninput =
+        () => {
+
+            reasonCounter.textContent =
+                `${
+                    reasonInput
+                        .value
+                        .trim()
+                        .length
+                } characters`
+
+            validateStatusForm()
+        }
+
+    emergencyCheckbox.onchange =
+        validateStatusForm
+
+    confirmButton.onclick =
+        async () => {
+
+            const targetStatus =
+                normalizeOrderStatus(
+                    targetSelect.value
+                )
+
+            const reason =
+                reasonInput
+                    .value
+                    .trim()
+
+            const minimumReasonLength =
+                getRequiredReasonLength(
+                    currentStatus,
+                    targetStatus,
+                    selectedMode
+                )
+
+            if (
+                minimumReasonLength &&
+                reason.length <
+                    minimumReasonLength
+            ) {
+
+                alert(
+                    `❌ Reason must be minimum ${
+                        minimumReasonLength
+                    } characters`
+                )
+
+                return
+            }
+
+            if (
+                selectedMode ===
+                    "EMERGENCY" &&
+                !emergencyCheckbox.checked
+            ) {
+
+                alert(
+                    "❌ Emergency confirmation checkbox select करें।"
+                )
+
+                return
+            }
+
+            const confirmed =
+                confirm(
+                    `${
+                        selectedMode ===
+                            "EMERGENCY"
+
+                        ?
+
+                        "EMERGENCY STATUS CHANGE"
+
+                        :
+
+                        "CONFIRM STATUS CHANGE"
+                    }\n\n` +
+                    `${
+                        formatOrderStatusLabel(
+                            currentStatus
+                        )
+                    } → ${
+                        formatOrderStatusLabel(
+                            targetStatus
+                        )
+                    }\n\n` +
+                    `Rider Action: ${
+                        selectedRiderAction
+                    }`
+                )
+
+            if (!confirmed) return
+
+            confirmButton.disabled =
+                true
+
+            confirmButton.textContent =
+                "Updating..."
+
+            try {
+
+                const updatedOrder =
+                    await applySafeStatusChange(
+                        currentOrder,
+                        targetStatus,
+                        selectedMode,
+                        reason,
+                        selectedRiderAction
+                    )
+
+                closeModal()
+
+                alert(
+                    `✅ Status Changed\n\n${
+                        formatOrderStatusLabel(
+                            currentStatus
+                        )
+                    } → ${
+                        formatOrderStatusLabel(
+                            targetStatus
+                        )
+                    }`
+                )
+
+                if (
+                    selectedRiderAction ===
+                    "CHANGE_RIDER" &&
+                    isActiveDeliveryStatus(
+                        targetStatus
+                    )
+                ) {
+
+                    await openRiderSelectionModal(
+                        updatedOrder
+                    )
+                }
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Safe status change failed:",
+                    error
+                )
+
+                alert(
+                    error.message ||
+                    "❌ Status change failed"
+                )
+
+                confirmButton.disabled =
+                    false
+
+                confirmButton.textContent =
+                    selectedMode ===
+                        "EMERGENCY"
+
+                    ?
+
+                    "Confirm Emergency Change"
+
+                    :
+
+                    "Confirm Status Change"
+            }
+        }
+
+    const defaultModeButton =
+        modal.querySelector(
+            `[data-status-mode="${
+                defaultMode
+            }"]`
+        )
+
+    if (defaultModeButton) {
+
+        defaultModeButton
+            .classList
+            .add("active")
+    }
+
+    renderTargetOptions()
+}
+
+async function applySafeStatusChange(
+    currentOrder,
+    targetStatus,
+    mode,
+    reason,
+    riderAction
+) {
+
+    const freshSnapshot =
+        await getDoc(ref)
+
+    if (!freshSnapshot.exists()) {
+
+        throw new Error(
+            "❌ Order not found"
+        )
+    }
+
+    const freshOrder =
+        freshSnapshot.data()
+
+    const currentStatus =
+        normalizeOrderStatus(
+            freshOrder.status
+        )
+
+    const expectedStatus =
+        normalizeOrderStatus(
+            currentOrder.status
+        )
+
+    const target =
+        normalizeOrderStatus(
+            targetStatus
+        )
+
+    if (
+        currentStatus !==
+        expectedStatus
+    ) {
+
+        throw new Error(
+            `❌ Order status already changed to ${
+                formatOrderStatusLabel(
+                    currentStatus
+                )
+            }. Modal दोबारा खोलें।`
+        )
+    }
+
+    if (
+        target ===
+        currentStatus
+    ) {
+
+        throw new Error(
+            "❌ Current और target status same हैं।"
+        )
+    }
+
+    if (
+        mode ===
+            "NORMAL_NEXT" &&
+        getNormalNextStatus(
+            currentStatus
+        ) !== target
+    ) {
+
+        throw new Error(
+            "❌ Forward status केवल one-by-one change हो सकता है।"
+        )
+    }
+
+    if (
+        mode ===
+        "BACKWARD"
+    ) {
+
+        const allowedBackwardStatuses =
+            getBackwardStatuses(
+                currentStatus,
+                freshOrder
+            )
+
+        if (
+            !allowedBackwardStatuses
+                .includes(target)
+        ) {
+
+            throw new Error(
+                "❌ Selected backward status allowed नहीं है।"
+            )
+        }
+    }
+
+    if (
+        mode === "CANCEL" &&
+        target !== "CANCELLED"
+    ) {
+
+        throw new Error(
+            "❌ Invalid cancel status."
+        )
+    }
+
+    if (
+        riderAction ===
+            "CHANGE_RIDER" &&
+        !isRiderAssignmentStatus(
+            target
+        )
+    ) {
+
+        throw new Error(
+            "❌ इस status में rider assign नहीं किया जा सकता।"
+        )
+    }
+
+    if (
+        riderAction ===
+        "SAME_RIDER"
+    ) {
+
+        if (
+            !freshOrder.riderId ||
+            !isRiderAssignmentStatus(
+                target
+            )
+        ) {
+
+            throw new Error(
+                "❌ Same rider के साथ delivery resume नहीं हो सकती।"
+            )
+        }
+
+        const ordersSnapshot =
+            await getDocs(
+                collection(
+                    db,
+                    "orders"
+                )
+            )
+
+        const activeStatuses = [
+            "PREPARING",
+            "READY_FOR_PICKUP",
+            "RIDER_ASSIGNED",
+            "RIDER_ACCEPTED",
+            "REACHED_RESTAURANT",
+            "PICKED_UP",
+            "OUT_FOR_DELIVERY"
+        ]
+
+        let activeOrderCount = 0
+
+        ordersSnapshot.forEach(
+            orderDocument => {
+
+                if (
+                    orderDocument.id ===
+                    orderId
+                ) return
+
+                const otherOrder =
+                    orderDocument.data()
+
+                const otherStatus =
+                    normalizeOrderStatus(
+                        otherOrder
+                            .deliveryStatus ||
+                        otherOrder.status
+                    )
+
+                if (
+                    otherOrder.riderId ===
+                        freshOrder.riderId &&
+                    activeStatuses.includes(
+                        otherStatus
+                    )
+                ) {
+
+                    activeOrderCount += 1
+                }
+            }
+        )
+
+        if (
+            activeOrderCount >= 2
+        ) {
+
+            throw new Error(
+                "❌ Same rider के पास पहले से 2 active orders हैं।"
+            )
+        }
+    }
+
+    const minimumReasonLength =
+        getRequiredReasonLength(
+            currentStatus,
+            target,
+            mode
+        )
+
+    if (
+        minimumReasonLength &&
+        reason.trim().length <
+            minimumReasonLength
+    ) {
+
+        throw new Error(
+            `❌ Reason must be minimum ${
+                minimumReasonLength
+            } characters`
+        )
+    }
+
+    const now =
+        Date.now()
+
+    const statusReason =
+        reason.trim() ||
+        "Normal status progression"
+
+    const updateData = {
+        status:
+            target,
+
+        deliveryStatus:
+            target,
+
+        previousStatus:
+            currentStatus,
+
+        statusChangedBy:
+            "ADMIN",
+
+        statusChangedById:
+            auth.currentUser
+                ?.uid || "",
+
+        adminStatusReason:
+            statusReason,
+
+        adminStatusTarget:
+            target,
+
+        adminStatusPrevious:
+            currentStatus,
+
+        statusChangeMode:
+            mode,
+
+        statusRiderAction:
+            riderAction,
+
+        statusChangedAt:
+            now,
+
+        updatedAt:
+            now,
+
+        lastUpdatedBy:
+            "ADMIN",
+
+        statusHistory:
+            arrayUnion({
+                fromStatus:
+                    currentStatus,
+
+                toStatus:
+                    target,
+
+                reason:
+                    statusReason,
+
+                mode,
+
+                riderAction,
+
+                changedBy:
+                    "ADMIN",
+
+                changedById:
+                    auth.currentUser
+                        ?.uid || "",
+
+                changedAt:
+                    now
+            })
+    }
+
+    if (
+        target === "CANCELLED"
+    ) {
+
+        updateData.statusBeforeCancel =
+            currentStatus
+
+        updateData.cancelReason =
+            reason.trim()
+
+        updateData.cancelledBy =
+            "ADMIN"
+
+        updateData.cancelledAt =
+            now
+
+        updateData.riderOperationalActive =
+            false
+
+        updateData.pendingRiderId =
+            ""
+
+        updateData.pendingRiderName =
+            ""
+
+        updateData.pendingRiderPhone =
+            ""
+
+        updateData.pendingRiderRequestStatus =
+            ""
+
+        updateData.riderChangePending =
+            false
+    }
+
+    else {
+
+        updateData.cancelReason =
+            ""
+
+        updateData.cancelledBy =
+            ""
+
+        updateData.cancelledAt =
+            null
+    }
+
+    if (
+        target === "DELIVERED"
+    ) {
+
+        updateData.riderOperationalActive =
+            false
+
+        updateData.pendingRiderId =
+            ""
+
+        updateData.pendingRiderName =
+            ""
+
+        updateData.pendingRiderPhone =
+            ""
+
+        updateData.pendingRiderRequestStatus =
+            ""
+
+        updateData.riderChangePending =
+            false
+    }
+
+    if (
+        riderAction ===
+            "REMOVE_RIDER" &&
+        isActiveDeliveryStatus(
+            target
+        )
+    ) {
+
+        updateData.riderId =
+            ""
+
+        updateData.riderName =
+            ""
+
+        updateData.riderPhone =
+            ""
+
+        updateData.riderAssigned =
+            false
+
+        updateData.riderRequestStatus =
+            ""
+
+        updateData.pendingRiderId =
+            ""
+
+        updateData.pendingRiderName =
+            ""
+
+        updateData.pendingRiderPhone =
+            ""
+
+        updateData.pendingRiderRequestStatus =
+            ""
+
+        updateData.riderChangePending =
+            false
+
+        updateData.riderOperationalActive =
+            false
+    }
+
+    if (
+        riderAction ===
+            "SAME_RIDER" &&
+        freshOrder.riderId &&
+        isRiderAssignmentStatus(
+            target
+        )
+    ) {
+
+        updateData.riderAssigned =
+            true
+
+        updateData.riderRequestStatus =
+            "ACCEPTED"
+
+        updateData.riderOperationalActive =
+            true
+
+        updateData.pendingRiderId =
+            ""
+
+        updateData.pendingRiderName =
+            ""
+
+        updateData.pendingRiderPhone =
+            ""
+
+        updateData.pendingRiderRequestStatus =
+            ""
+
+        updateData.riderChangePending =
+            false
+
+        updateData.navigationStage =
+            [
+                "PICKED_UP",
+                "OUT_FOR_DELIVERY"
+            ].includes(target)
+
+            ?
+
+            "TO_CUSTOMER"
+
+            :
+
+            "TO_RESTAURANT"
+    }
+
+    const batch =
+        writeBatch(db)
+
+    batch.update(
+        ref,
+        updateData
+    )
+
+    const previousRiderId =
+        freshOrder.riderId || ""
+
+    if (previousRiderId) {
+
+        const riderReference =
             doc(
                 db,
                 "riders",
-                riderId
-            ),
+                previousRiderId
+            )
 
-            {
-                activeOrderId: "",
+        const riderSnapshot =
+            await getDoc(
+                riderReference
+            )
 
-                totalDeliveries:
-                    (order.totalDeliveries || 0) + 1
+        if (riderSnapshot.exists()) {
+
+            const riderData =
+                riderSnapshot.data()
+
+            const riderUpdate = {
+                updatedAt:
+                    now
             }
-        )
-    }
-}
-            if (
-    finalStatus ===
-    "READY_FOR_PICKUP"
-) {
 
-    await updateDoc(
-        ref,
-        {
-            status: "READY_FOR_PICKUP",
-            riderId: "",
-            riderName: "",
-            riderPhone: "",
-            riderAssigned: false,
-            updatedAt: Date.now()
-        }
-    )
+            const enteringDelivered =
+                currentStatus !==
+                    "DELIVERED" &&
+                target ===
+                    "DELIVERED"
 
-    alert(
-        "🚚 Order Sent To All Riders"
-    )
+            const leavingDelivered =
+                currentStatus ===
+                    "DELIVERED" &&
+                target !==
+                    "DELIVERED"
 
-    return
-}
+            if (enteringDelivered) {
 
-            // CANCEL REASON
+                riderUpdate.totalDeliveries =
+                    Number(
+                        riderData
+                            .totalDeliveries ||
+                        0
+                    ) + 1
+            }
 
-            if (
-    finalStatus !==
-    "CANCELLED"
-) {
+            if (leavingDelivered) {
 
-    updateData.cancelReason = ""
-
-    updateData.cancelledBy = ""
-
-    updateData.cancelledAt = null
-}
-
-            // ASK REASON
+                riderUpdate.totalDeliveries =
+                    Math.max(
+                        0,
+                        Number(
+                            riderData
+                                .totalDeliveries ||
+                            0
+                        ) - 1
+                    )
+            }
 
             if (
-    finalStatus ===
-    "CANCELLED"
-) {
+                target ===
+                    "DELIVERED" ||
+                target ===
+                    "CANCELLED" ||
+                riderAction ===
+                    "REMOVE_RIDER"
+            ) {
 
-    let reason = prompt(
-    "Enter Cancel Reason (Minimum 3 Characters)"
-) || ""
+                if (
+                    riderData
+                        .activeOrderId ===
+                    orderId
+                ) {
 
-    reason = reason.trim()
+                    riderUpdate.activeOrderId =
+                        ""
+                }
+            }
 
-    if (
-        reason.length < 3
-    ) {
-
-        alert(
-            "❌ Reason must be minimum 3 characters"
-        )
-
-        return
-    }
-
-    updateData.cancelReason =
-    reason
-
-updateData.cancelledBy =
-    "ADMIN"
-
-updateData.cancelledAt =
-    Date.now()
-
-updateData.statusChangedBy =
-    "ADMIN"
-
-updateData.adminStatusReason =
-    reason
-
-updateData.adminStatusTarget =
-    "CANCELLED"
-
-updateData.statusChangedAt =
-    Date.now()
-}
-
-            await updateDoc(
-                ref,
-                updateData
-            )
-
-            statusDropdown
-                .classList
-                .remove(
-                    "show-dropdown"
+            if (
+                riderAction ===
+                    "SAME_RIDER" &&
+                isRiderAssignmentStatus(
+                    target
                 )
+            ) {
 
-            alert(
-`✅ Status Changed To ${finalStatus}`
+                riderUpdate.activeOrderId =
+                    orderId
+            }
+
+            batch.update(
+                riderReference,
+                riderUpdate
             )
         }
-    })
+    }
+
+    await batch.commit()
+
+    return {
+        ...freshOrder,
+        ...updateData,
+        status:
+            target,
+        deliveryStatus:
+            target
+    }
+}
+
+function escapeStatusHtml(value) {
+
+    return String(
+        value ?? ""
+    )
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        )
 }
 // ITEMS
 
@@ -2063,16 +4238,8 @@ function formatDate(timestamp) {
 function renderTimeline(order) {
 
     const timeline = [
-
-        "PENDING",
-        "APPROVED",
-        "PREPARING",
-        "READY_FOR_PICKUP",
-        "RIDER_ASSIGNED",
-        "OUT_FOR_DELIVERY",
-        "DELIVERED",
+        ...ORDER_STATUS_FLOW,
         "CANCELLED"
-
     ]
 
     return timeline.map(status => `
@@ -2102,105 +4269,722 @@ ${order.status === status ? "Current Status 😎" : ""}
 
 `).join("")
 }
-async function autoAssignRider(orderId) {
+// =====================================================
+// MANUAL RIDER SELECTION
+// =====================================================
 
-    const ridersSnapshot =
+async function openRiderSelectionModal(
+    currentOrder
+) {
 
-        await getDocs(
-            collection(
-                db,
-                "riders"
-            )
+    let existingModal =
+        document.getElementById(
+            "riderSelectionModal"
         )
 
-    let availableRiders = []
+    if (existingModal) {
 
-    ridersSnapshot.forEach(docSnap => {
+        existingModal.remove()
+    }
 
-        const rider =
-            docSnap.data()
+    const modal =
+        document.createElement(
+            "div"
+        )
+
+    modal.id =
+        "riderSelectionModal"
+
+    modal.className =
+        "rider-selection-modal"
+
+    modal.innerHTML = `
+
+<div class="rider-selection-box">
+
+<div class="rider-selection-header">
+
+<div>
+
+<h2>
+🛵 Select Rider
+</h2>
+
+<p>
+Choose an online approved rider
+</p>
+
+</div>
+
+<button
+id="closeRiderModalBtn"
+class="close-rider-modal"
+>
+✕
+</button>
+
+</div>
+
+<div
+id="riderSelectionList"
+class="rider-selection-list"
+>
+
+<div class="rider-loading">
+
+Loading available riders...
+
+</div>
+
+</div>
+
+</div>
+
+`
+
+    document.body.appendChild(
+        modal
+    )
+
+    const closeButton =
+        document.getElementById(
+            "closeRiderModalBtn"
+        )
+
+    closeButton.onclick = () => {
+
+        modal.remove()
+    }
+
+    modal.onclick = event => {
 
         if (
-
-            rider.online === true &&
-
-            rider.status === "APPROVED" &&
-
-            !rider.activeOrderId
-
+            event.target === modal
         ) {
 
-            availableRiders.push({
-
-                id: docSnap.id,
-
-                ...rider
-            })
+            modal.remove()
         }
-    })
+    }
 
-    if (
-        availableRiders.length === 0
-    ) {
+    await loadRidersForSelection(
+        currentOrder,
+        modal
+    )
+}
 
-        alert(
-            "❌ No Online Rider Available"
+
+// =====================================================
+// LOAD RIDERS
+// =====================================================
+
+async function loadRidersForSelection(
+    currentOrder,
+    modal
+) {
+
+    const list =
+        document.getElementById(
+            "riderSelectionList"
         )
+
+    try {
+
+        const [
+            ridersSnapshot,
+            ordersSnapshot
+        ] = await Promise.all([
+
+            getDocs(
+                collection(
+                    db,
+                    "riders"
+                )
+            ),
+
+            getDocs(
+                collection(
+                    db,
+                    "orders"
+                )
+            )
+        ])
+
+        const activeOrderStatuses = [
+
+    "PREPARING",
+    "READY_FOR_PICKUP",
+    "RIDER_ASSIGNED",
+    "RIDER_ACCEPTED",
+    "REACHED_RESTAURANT",
+    "PICKED_UP",
+    "OUT_FOR_DELIVERY"
+]
+
+        const riders = []
+
+        ridersSnapshot.forEach(
+            riderDocument => {
+
+                const rider =
+                    riderDocument.data()
+
+                const riderStatus =
+                    String(
+                        rider.status || ""
+                    ).toUpperCase()
+
+                if (
+
+                    rider.online !== true ||
+
+                    riderStatus !== "APPROVED"
+
+                ) {
+
+                    return
+                }
+
+                let activeOrderCount = 0
+
+                ordersSnapshot.forEach(
+                    orderDocument => {
+
+                        const order =
+                            orderDocument.data()
+
+                        const status =
+                            String(
+
+                                order.deliveryStatus ||
+
+                                order.status ||
+
+                                ""
+
+                            ).toUpperCase()
+
+                        if (
+
+                            order.riderId ===
+                                riderDocument.id
+
+                            &&
+
+                            orderDocument.id !==
+                                orderId
+
+                            &&
+
+                            activeOrderStatuses
+                                .includes(
+                                    status
+                                )
+
+                        ) {
+
+                            activeOrderCount++
+                        }
+                    }
+                )
+
+                riders.push({
+
+                    id:
+                        riderDocument.id,
+
+                    name:
+                        rider.name ||
+                        "Unnamed Rider",
+
+                    phone:
+                        rider.phone ||
+                        rider.mobile ||
+                        "-",
+
+                    activeOrderId:
+                        rider.activeOrderId ||
+                        "",
+
+                    activeOrderCount:
+                        activeOrderCount,
+
+                    full:
+    activeOrderCount >= 2
+                })
+            }
+        )
+
+        riders.sort(
+            (
+                firstRider,
+                secondRider
+            ) => {
+
+                return (
+
+                    firstRider
+                        .activeOrderCount
+
+                    -
+
+                    secondRider
+                        .activeOrderCount
+                )
+            }
+        )
+
+        if (
+            riders.length === 0
+        ) {
+
+            list.innerHTML = `
+
+<div class="no-rider-found">
+
+❌ No online approved rider available
+
+</div>
+
+`
+
+            return
+        }
+
+        list.innerHTML =
+            riders
+                .map(
+                    rider => {
+
+                        return `
+
+<div
+class="
+rider-select-card
+${rider.full
+    ? "rider-capacity-full"
+    : ""
+}
+"
+>
+
+<div class="rider-select-info">
+
+<div class="rider-select-name">
+
+🟢 ${escapeRiderHtml(
+    rider.name
+)}
+
+</div>
+
+<div class="rider-select-phone">
+
+📞 ${escapeRiderHtml(
+    rider.phone
+)}
+
+</div>
+
+<div class="rider-select-id">
+
+ID:
+${escapeRiderHtml(
+    rider.id
+)}
+
+</div>
+
+</div>
+
+<div class="rider-select-capacity">
+
+<div
+class="
+rider-capacity-badge
+${rider.full
+    ? "capacity-full"
+    : ""
+}
+"
+>
+
+${rider.activeOrderCount}/2 Orders
+
+</div>
+
+<button
+class="assign-rider-btn"
+data-rider-id="${rider.id}"
+${rider.full ? "disabled" : ""}
+>
+
+SEND ORDER REQUEST
+
+</button>
+
+</div>
+
+</div>
+
+`
+                    }
+                )
+                .join("")
+
+        const assignButtons =
+            list.querySelectorAll(
+                ".assign-rider-btn:not([disabled])"
+            )
+
+        assignButtons.forEach(
+            button => {
+
+                button.onclick =
+                    async () => {
+
+                        const selectedRiderId =
+                            button.dataset
+                                .riderId
+
+                        const selectedRider =
+                            riders.find(
+                                rider =>
+                                    rider.id ===
+                                    selectedRiderId
+                            )
+
+                        if (
+                            !selectedRider
+                        ) {
+
+                            return
+                        }
+
+                        await assignRiderToOrder(
+
+                            currentOrder,
+
+                            selectedRider,
+
+                            button,
+
+                            modal
+                        )
+                    }
+            }
+        )
+
+    } catch (error) {
+
+        console.error(
+            "Rider load error:",
+            error
+        )
+
+        list.innerHTML = `
+
+<div class="no-rider-found">
+
+❌ Unable to load riders
+
+</div>
+
+`
+    }
+}
+
+
+// =====================================================
+// ASSIGN RIDER
+// =====================================================
+
+async function assignRiderToOrder(
+
+    currentOrder,
+
+    selectedRider,
+
+    button,
+
+    modal
+
+) {
+
+    const hasCurrentRider =
+        Boolean(
+            currentOrder.riderId
+        )
+
+    const actionName =
+        hasCurrentRider
+
+            ? "Change rider"
+
+            : "Assign rider"
+
+    const confirmed =
+        confirm(
+
+`${actionName} to ${selectedRider.name}?
+
+Current active orders: ${selectedRider.activeOrderCount}/2
+
+${
+    hasCurrentRider
+
+        ? "Current rider will continue until the new rider accepts."
+
+        : "The rider will receive this request in Pending Orders."
+}`
+        )
+
+    if (!confirmed) {
 
         return
     }
 
-    const selectedRider =
-        availableRiders[0]
+    button.disabled =
+        true
 
-    await updateDoc(
+    button.innerText =
 
-        doc(
-            db,
-            "orders",
-            orderId
-        ),
+        hasCurrentRider
 
-        {
+            ? "SENDING CHANGE REQUEST..."
 
-            riderId:
-                selectedRider.id,
+            : "ASSIGNING..."
 
-            riderName:
-                selectedRider.name || "",
+    try {
 
-            riderPhone:
-                selectedRider.phone || "",
+        const now =
+            Date.now()
 
-            riderAssigned: true,
+        // ==========================================
+        // CHANGE RIDER FLOW
+        // ==========================================
 
-            status:
-                "RIDER_ASSIGNED",
+        if (
+            hasCurrentRider
+        ) {
 
-            updatedAt:
-                Date.now()
+            // Same rider ko dobara request nahi bhejni
+            if (
+                currentOrder.riderId ===
+                selectedRider.id
+            ) {
+
+                alert(
+                    "❌ This rider is already assigned to this order."
+                )
+
+                button.disabled =
+                    false
+
+                button.innerText =
+                    "SEND ORDER REQUEST"
+
+                return
+            }
+
+            await updateDoc(
+
+                ref,
+
+                {
+
+                    // New rider request fields
+                    pendingRiderId:
+                        selectedRider.id,
+
+                    pendingRiderName:
+                        selectedRider.name,
+
+                    pendingRiderPhone:
+
+                        selectedRider.phone === "-"
+
+                            ? ""
+
+                            : selectedRider.phone,
+
+                    pendingRiderRequestStatus:
+                        "PENDING",
+
+                    riderChangePending:
+                        true,
+
+                    riderChangeRequestedAt:
+                        now,
+
+                    riderChangeRequestedBy:
+                        "ADMIN",
+
+                    updatedAt:
+                        now,
+
+                    lastUpdatedBy:
+                        "ADMIN"
+                }
+            )
+
+            modal.remove()
+
+            alert(
+
+`✅ Rider change request sent to ${selectedRider.name}
+
+Current rider:
+${currentOrder.riderName || "Assigned Rider"}
+
+Current rider will continue the delivery until ${selectedRider.name} accepts the request.`
+            )
+
+            return
         }
-    )
 
-    await updateDoc(
+        // ==========================================
+        // NORMAL FIRST RIDER ASSIGNMENT
+        // ==========================================
 
-        doc(
-            db,
-            "riders",
-            selectedRider.id
-        ),
+        await updateDoc(
 
-        {
+            ref,
 
-            activeOrderId:
-                orderId
-        }
-    )
+            {
 
-    alert(
-        "🚚 Rider Auto Assigned"
-    )
+                riderId:
+                    selectedRider.id,
+
+                riderName:
+                    selectedRider.name,
+
+                riderPhone:
+
+                    selectedRider.phone === "-"
+
+                        ? ""
+
+                        : selectedRider.phone,
+
+                // Rider accepts tab true hoga
+                riderAssigned:
+                    false,
+
+                // Rider app Pending Orders me request
+                riderRequestStatus:
+                    "PENDING",
+
+                navigationStage:
+                    "TO_RESTAURANT",
+
+                riderRequestSentAt:
+                    now,
+
+                assignedAt:
+                    now,
+
+                // Purane pending-change fields clean
+                pendingRiderId:
+                    "",
+
+                pendingRiderName:
+                    "",
+
+                pendingRiderPhone:
+                    "",
+
+                pendingRiderRequestStatus:
+                    "",
+
+                riderChangePending:
+                    false,
+
+                updatedAt:
+                    now,
+
+                lastUpdatedBy:
+                    "ADMIN"
+            }
+        )
+
+        modal.remove()
+
+        alert(
+
+`✅ Order request sent to ${selectedRider.name}
+
+Rider ko Pending Orders me request dikhai degi.
+
+Accept karne ke baad order Active Orders me aayega.`
+        )
+
+    } catch (error) {
+
+        console.error(
+
+            hasCurrentRider
+
+                ? "Change rider error:"
+
+                : "Assign rider error:",
+
+            error
+        )
+
+        button.disabled =
+            false
+
+        button.innerText =
+            "SEND ORDER REQUEST"
+
+        alert(
+
+            hasCurrentRider
+
+                ? "❌ Rider change request failed"
+
+                : "❌ Rider assignment failed"
+        )
+    }
 }
+
+
+// =====================================================
+// SAFE HTML
+// =====================================================
+
+function escapeRiderHtml(
+    value
+) {
+
+    return String(
+        value || ""
+    )
+
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+
+        .replaceAll(
+            "'",
+            "&#039;"
+        )
 }
 const logoutBtn =
 document.getElementById(
@@ -2217,4 +5001,5 @@ if (logoutBtn) {
         window.location.href =
         "login.html"
     }
+}
 }

@@ -1086,3 +1086,369 @@ font-weight:600;
     overflow-wrap: anywhere;
 }
 }
+/* =========================================================
+   MANUAL RIDER SELECTION MODAL
+========================================================= */
+
+.rider-selection-modal {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 999999;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        rgba(
+            2,
+            6,
+            23,
+            0.82
+        );
+
+    backdrop-filter:
+        blur(5px);
+}
+
+.rider-selection-box {
+
+    width: min(
+        720px,
+        100%
+    );
+
+    max-height: 85vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+    overflow: hidden;
+
+    background:
+        #0f172a;
+
+    border:
+        1px solid
+        #334155;
+
+    border-radius:
+        24px;
+
+    box-shadow:
+        0 30px 90px
+        rgba(
+            0,
+            0,
+            0,
+            0.55
+        );
+}
+
+.rider-selection-header {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content:
+        space-between;
+
+    gap: 20px;
+
+    padding: 24px;
+
+    border-bottom:
+        1px solid
+        #334155;
+}
+
+.rider-selection-header h2 {
+
+    margin: 0 0 6px;
+
+    color:
+        #ffffff;
+}
+
+.rider-selection-header p {
+
+    margin: 0;
+
+    color:
+        #94a3b8;
+}
+
+.close-rider-modal {
+
+    width: 42px;
+
+    height: 42px;
+
+    flex-shrink: 0;
+
+    border: none;
+
+    border-radius:
+        12px;
+
+    cursor: pointer;
+
+    background:
+        #1e293b;
+
+    color:
+        #ffffff;
+
+    font-size:
+        18px;
+}
+
+.close-rider-modal:hover {
+
+    background:
+        #dc2626;
+}
+
+.rider-selection-list {
+
+    padding: 20px;
+
+    overflow-y: auto;
+
+    display: flex;
+
+    flex-direction:
+        column;
+
+    gap: 14px;
+}
+
+.rider-select-card {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content:
+        space-between;
+
+    gap: 20px;
+
+    padding: 18px;
+
+    border:
+        1px solid
+        #334155;
+
+    border-radius:
+        18px;
+
+    background:
+        #111827;
+}
+
+.rider-select-card:hover {
+
+    border-color:
+        #7c3aed;
+
+    background:
+        #162033;
+}
+
+.rider-capacity-full {
+
+    opacity: 0.62;
+}
+
+.rider-select-info {
+
+    min-width: 0;
+}
+
+.rider-select-name {
+
+    margin-bottom: 8px;
+
+    color:
+        #ffffff;
+
+    font-size:
+        18px;
+
+    font-weight:
+        700;
+}
+
+.rider-select-phone {
+
+    margin-bottom: 6px;
+
+    color:
+        #cbd5e1;
+}
+
+.rider-select-id {
+
+    color:
+        #64748b;
+
+    font-size:
+        12px;
+
+    overflow-wrap:
+        anywhere;
+}
+
+.rider-select-capacity {
+
+    display: flex;
+
+    align-items:
+        flex-end;
+
+    flex-direction:
+        column;
+
+    gap: 10px;
+
+    flex-shrink: 0;
+}
+
+.rider-capacity-badge {
+
+    padding: 7px 12px;
+
+    border-radius:
+        999px;
+
+    background:
+        rgba(
+            34,
+            197,
+            94,
+            0.15
+        );
+
+    color:
+        #4ade80;
+
+    font-size:
+        13px;
+
+    font-weight:
+        700;
+}
+
+.rider-capacity-badge.capacity-full {
+
+    background:
+        rgba(
+            239,
+            68,
+            68,
+            0.15
+        );
+
+    color:
+        #f87171;
+}
+
+.assign-rider-btn {
+
+    min-width: 145px;
+
+    padding: 11px 16px;
+
+    border: none;
+
+    border-radius:
+        12px;
+
+    cursor: pointer;
+
+    background:
+        #7c3aed;
+
+    color:
+        #ffffff;
+
+    font-weight:
+        700;
+}
+
+.assign-rider-btn:hover {
+
+    background:
+        #8b5cf6;
+}
+
+.assign-rider-btn:disabled {
+
+    cursor:
+        not-allowed;
+
+    background:
+        #475569;
+
+    color:
+        #cbd5e1;
+}
+
+.rider-loading,
+.no-rider-found {
+
+    padding: 35px 20px;
+
+    border:
+        1px dashed
+        #475569;
+
+    border-radius:
+        16px;
+
+    color:
+        #94a3b8;
+
+    text-align:
+        center;
+}
+
+@media(
+    max-width: 650px
+) {
+
+    .rider-selection-modal {
+
+        padding: 10px;
+    }
+
+    .rider-select-card {
+
+        align-items:
+            stretch;
+
+        flex-direction:
+            column;
+    }
+
+    .rider-select-capacity {
+
+        align-items:
+            stretch;
+    }
+
+    .assign-rider-btn {
+
+        width: 100%;
+    }
+}

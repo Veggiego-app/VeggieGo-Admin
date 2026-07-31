@@ -670,11 +670,13 @@ ${order.totalItems || getTotalQty(order.items)}
 class="status-badge-table"
 
 style="
-background:${getColor(order.status)}
+background:${getColor(
+    order.status || order.deliveryStatus
+)}
 "
 >
 
-${order.status || "-"}
+${order.status || order.deliveryStatus || "-"}
 
 </span>
 
@@ -932,14 +934,18 @@ function updateStatus(
 
         .update({
 
-            status: "CANCELLED",
+    status:
+        "CANCELLED",
 
-            cancelReason:
-                reason,
+    deliveryStatus:
+        "CANCELLED",
 
-            updatedAt:
-                Date.now()
-        })
+    cancelReason:
+        reason,
+
+    updatedAt:
+        Date.now()
+})
 
         .then(() => {
 
@@ -955,11 +961,15 @@ function updateStatus(
 
     const updateData = {
 
-        status: status,
+    status:
+        status,
 
-        updatedAt:
-            Date.now()
-    }
+    deliveryStatus:
+        status,
+
+    updatedAt:
+        Date.now()
+}
 
     // 🔥 AUTO RIDER
 
