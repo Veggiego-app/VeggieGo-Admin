@@ -515,3 +515,17 @@ body.modal-open { overflow: hidden; }
     .footer-actions { width: 100%; }
     .footer-actions .btn { flex: 1; }
 }
+
+/* Draft reservation workflow */
+.draft-edit-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    border-color: rgba(247, 185, 85, .35);
+    color: #ffe0a6;
+    background: rgba(247, 185, 85, .09);
+}
+.draft-edit-notice strong { color: var(--amber); white-space: nowrap; }
+#settlementHistoryBody .section-actions { flex-wrap: nowrap; }
+#settlementHistoryBody .btn { min-height: 32px; padding: 6px 10px; }

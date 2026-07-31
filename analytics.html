@@ -256,6 +256,10 @@
             </div>
 
             <div id="settlementBuilder">
+                <div id="draftEditNotice" class="inline-alert draft-edit-notice hidden">
+                    <strong>Draft edit mode</strong>
+                    <span id="draftEditNoticeText"></span>
+                </div>
                 <div class="workspace-controls">
                     <label class="field">
                         <span id="beneficiaryLabel">Restaurant</span>
@@ -306,7 +310,7 @@
                         <button id="finalizeSettlementBtn" class="btn btn-success" type="button">Finalize settlement</button>
                     </div>
                 </div>
-                <p class="helper-text">A cancelled order has ₹0 base payout. Compensation must be added as a Credit, preventing double payment.</p>
+                <p class="helper-text">Draft me save kiye orders reserve ho jate hain aur kisi dusre settlement me nahi dikhte. Unhe release karne ke liye draft delete karein. A cancelled order has ₹0 base payout; compensation must be added as a Credit.</p>
             </div>
 
             <div id="settlementHistoryView" class="hidden">
@@ -392,8 +396,25 @@
             <form id="paymentForm">
                 <input id="paymentSettlementId" type="hidden">
                 <div class="form-grid">
+                    <label class="field">
+    <span>Payment Mode *</span>
+
+    <select id="paymentMode" required>
+        <option value="">Select payment mode</option>
+        <option value="CASH">Cash</option>
+        <option value="UPI">UPI / QR</option>
+        <option value="BANK_TRANSFER">Bank Transfer</option>
+        <option value="CHEQUE">Cheque</option>
+    </select>
+</label>
                     <label class="field"><span>Payment date</span><input id="paymentDate" type="date" required></label>
-                    <label class="field"><span>Reference / UTR</span><input id="paymentReference" required minlength="3" placeholder="Bank reference"></label>
+                    <label class="field">
+    <span>Reference / UTR</span>
+    <input
+        id="paymentReference"
+        placeholder="UPI / Bank / Cheque reference"
+    >
+</label>
                     <label class="field field-span-2"><span>Remark</span><textarea id="paymentRemark" rows="2" placeholder="Optional payment note"></textarea></label>
                 </div>
                 <div class="modal-actions">
@@ -407,6 +428,6 @@
     <div id="toastContainer" class="toast-container" aria-live="polite"></div>
     <div id="pageLoader" class="page-loader"><span class="spinner"></span><strong>Loading finance data…</strong></div>
 
-    <script type="module" src="analytics.js"></script>
+    <script type="module" src="analytics.js?v=25"></script>
 </body>
 </html>

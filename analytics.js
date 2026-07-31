@@ -5,7 +5,8 @@ import {
     onSnapshot,
     addDoc,
     runTransaction,
-    serverTimestamp
+    serverTimestamp,
+    deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
     onAuthStateChanged,
@@ -72,7 +73,8 @@ const state = {
     settlementSubTab: "DELIVERED",
     settlementEntries: [],
     selectedSettlementKeys: new Set(),
-    settlementLoaded: false
+    settlementLoaded: false,
+    editingDraftId: ""
 };
 
 const $ = (id) => document.getElementById(id);
@@ -471,6 +473,25 @@ function baseAlreadySettled(order, type) {
     const status = normalizedText(order[settlementField(type, "SettlementStatus")]);
     const id = order[settlementField(type, "SettlementId")];
     return FINAL_SETTLEMENT_STATUSES.has(status) || Boolean(id);
+}
+
+function draftSettlementId(order, type) {
+    return String(order[settlementField(type, "DraftSettlementId")] || "");
+}
+
+function reservedByAnotherDraft(order, type) {
+    const draftId = draftSettlementId(order, type);
+    return Boolean(draftId && draftId !== state.editingDraftId);
+}
+
+function resetDraftEditing() {
+    state.editingDraftId = "";
+    const saveButton = $("saveDraftBtn");
+    const finalizeButton = $("finalizeSettlementBtn");
+    if (saveButton) saveButton.textContent = "Save draft";
+    if (finalizeButton) finalizeButton.textContent = "Finalize settlement";
+    $("draftEditNotice")?.classList.add("hidden");
+    setText("draftEditNoticeText", "");
 }
 
 function findOrder(queryValue) {
@@ -921,9 +942,10 @@ function eligibleSettlementEntries(type, beneficiaryId, category) {
         .filter((order) => {
             const pending = pendingAdjustments(order, type);
             const settled = baseAlreadySettled(order, type);
-            if (category === "DELIVERED") return isDelivered(order) && !settled;
-            if (category === "CANCELLED") return isCancelled(order) && pending.length > 0;
-            if (category === "POST") return isFinalOrder(order) && settled && pending.length > 0;
+            const reserved = reservedByAnotherDraft(order, type);
+            if (category === "DELIVERED") return isDelivered(order) && !settled && !reserved;
+            if (category === "CANCELLED") return isCancelled(order) && pending.length > 0 && !reserved;
+            if (category === "POST") return isFinalOrder(order) && settled && pending.length > 0 && !reserved;
             return false;
         })
         .map((order) => settlementEntryForOrder(order, type, category))
@@ -1047,8 +1069,12 @@ function renderSettlementHistory() {
             ? `${safeText(settlement.dateFrom || "—")} – ${safeText(settlement.dateTo || "—")}`
             : "All dates";
         const status = normalizedText(settlement.status || "DRAFT");
-        const actions = `<button class="btn btn-secondary" data-view-settlement="${safeText(settlement.id)}" type="button">View</button>
-            ${status === "FINALIZED" ? `<button class="btn btn-success" data-mark-paid="${safeText(settlement.id)}" type="button">Mark paid</button>` : ""}`;
+        const actions = status === "DRAFT"
+            ? `<button class="btn btn-secondary" data-view-settlement="${safeText(settlement.id)}" type="button">View</button>
+               <button class="btn btn-primary" data-edit-draft="${safeText(settlement.id)}" type="button">Edit</button>
+               <button class="btn btn-danger" data-delete-draft="${safeText(settlement.id)}" type="button">Delete</button>`
+            : `<button class="btn btn-secondary" data-view-settlement="${safeText(settlement.id)}" type="button">View</button>
+               ${status === "FINALIZED" ? `<button class="btn btn-success" data-mark-paid="${safeText(settlement.id)}" type="button">Mark paid</button>` : ""}`;
         return `<tr>
             <td><span class="cell-main">${safeText(settlement.displayId || settlement.id)}</span><span class="cell-sub">${safeText(formatDate(settlement.createdAt, true))}</span></td>
             <td>${safeText(settlement.beneficiaryName || settlement.beneficiaryId || "—")}</td>
@@ -1130,7 +1156,7 @@ function displayIdForSettlement(type) {
     return `ST-${type === "RESTAURANT" ? "R" : "D"}-${stamp}`;
 }
 
-function settlementPayload(status) {
+function settlementPayload(status, existingSettlement = null) {
     const beneficiary = currentBeneficiary();
     const entries = selectedEntries();
     const totals = selectedSettlementTotals();
@@ -1138,7 +1164,7 @@ function settlementPayload(status) {
         ? ["name", "restaurantName", "businessName"]
         : ["name", "riderName", "fullName"];
     return {
-        displayId: displayIdForSettlement(state.mainTab),
+        displayId: existingSettlement?.displayId || displayIdForSettlement(state.mainTab),
         beneficiaryType: state.mainTab,
         beneficiaryId: beneficiary.id,
         beneficiaryName: String(firstValue(beneficiary, nameKeys, beneficiary.id)),
@@ -1171,7 +1197,7 @@ function settlementPayload(status) {
         status,
         createdByUid: state.user?.uid || "",
         createdByEmail: state.user?.email || "",
-        createdAt: serverTimestamp(),
+        createdAt: existingSettlement?.createdAt || serverTimestamp(),
         updatedAt: serverTimestamp()
     };
 }
@@ -1195,15 +1221,252 @@ async function saveDraft() {
         toast(error, "error");
         return;
     }
+
     const button = $("saveDraftBtn");
     button.disabled = true;
+
     try {
-        await addDoc(collection(db, COLLECTIONS.settlements), settlementPayload("DRAFT"));
-        toast("Settlement draft saved. Orders are still unsettled.", "success");
+        const selected = selectedEntries();
+        const type = state.mainTab;
+        const existingDraft = state.editingDraftId
+            ? state.settlements.find((item) => item.id === state.editingDraftId)
+            : null;
+        const settlementRef = state.editingDraftId
+            ? doc(db, COLLECTIONS.settlements, state.editingDraftId)
+            : doc(collection(db, COLLECTIONS.settlements));
+        const payload = settlementPayload("DRAFT", existingDraft);
+
+        await runTransaction(db, async (transaction) => {
+            let oldEntries = [];
+
+            /*
+             * IMPORTANT:
+             * Firestore transaction me pehle saare reads hote hain.
+             * Uske baad hi updates / set / delete writes kiye jaate hain.
+             */
+
+            if (state.editingDraftId) {
+                const draftSnapshot = await transaction.get(settlementRef);
+
+                if (!draftSnapshot.exists()) {
+                    throw new Error("Draft no longer exists.");
+                }
+
+                const draftData = draftSnapshot.data();
+
+                if (normalizedText(draftData.status) !== "DRAFT") {
+                    throw new Error("Only a draft settlement can be edited.");
+                }
+
+                oldEntries = draftData.entries || [];
+            }
+
+            const selectedOrderIds =
+                new Set(
+                    selected.map(
+                        (entry) => entry.orderDocId
+                    )
+                );
+
+            const oldOrdersToRelease = [];
+            const selectedOrdersToReserve = [];
+
+            /*
+             * READ PHASE 1:
+             * Edited draft se remove hue purane orders read karo.
+             */
+            for (const oldEntry of oldEntries) {
+
+                if (
+                    selectedOrderIds.has(
+                        oldEntry.orderDocId
+                    )
+                ) {
+                    continue;
+                }
+
+                const oldOrderRef =
+                    doc(
+                        db,
+                        COLLECTIONS.orders,
+                        oldEntry.orderDocId
+                    );
+
+                const oldOrderSnapshot =
+                    await transaction.get(
+                        oldOrderRef
+                    );
+
+                if (!oldOrderSnapshot.exists()) {
+                    continue;
+                }
+
+                const oldOrder =
+                    oldOrderSnapshot.data();
+
+                if (
+                    String(
+                        oldOrder[
+                            settlementField(
+                                type,
+                                "DraftSettlementId"
+                            )
+                        ] || ""
+                    ) === settlementRef.id
+                ) {
+
+                    oldOrdersToRelease.push({
+                        ref: oldOrderRef
+                    });
+                }
+            }
+
+            /*
+             * READ PHASE 2:
+             * Naye selected orders read aur validate karo.
+             */
+            for (const entry of selected) {
+
+                const orderRef =
+                    doc(
+                        db,
+                        COLLECTIONS.orders,
+                        entry.orderDocId
+                    );
+
+                const orderSnapshot =
+                    await transaction.get(
+                        orderRef
+                    );
+
+                if (!orderSnapshot.exists()) {
+                    throw new Error(
+                        `Order ${entry.orderId} no longer exists.`
+                    );
+                }
+
+                const order = {
+                    id: orderSnapshot.id,
+                    ...orderSnapshot.data()
+                };
+
+                if (!isFinalOrder(order)) {
+                    throw new Error(
+                        `Order ${entry.orderId} is not final.`
+                    );
+                }
+
+                if (
+                    baseAlreadySettled(
+                        order,
+                        type
+                    )
+                ) {
+                    throw new Error(
+                        `Order ${entry.orderId} is already finalized in another settlement.`
+                    );
+                }
+
+                const otherDraftId =
+                    draftSettlementId(
+                        order,
+                        type
+                    );
+
+                if (
+                    otherDraftId &&
+                    otherDraftId !== settlementRef.id
+                ) {
+                    throw new Error(
+                        `Order ${entry.orderId} is already reserved in another draft.`
+                    );
+                }
+
+                selectedOrdersToReserve.push({
+                    ref: orderRef
+                });
+            }
+
+            /*
+             * WRITE PHASE:
+             * Ab saare reads complete ho chuke hain.
+             */
+
+            for (
+                const oldOrder
+                of oldOrdersToRelease
+            ) {
+
+                transaction.update(
+                    oldOrder.ref,
+                    {
+                        [settlementField(
+                            type,
+                            "DraftSettlementId"
+                        )]: deleteField(),
+
+                        [settlementField(
+                            type,
+                            "DraftSettlementStatus"
+                        )]: deleteField(),
+
+                        [settlementField(
+                            type,
+                            "DraftReservedAt"
+                        )]: deleteField()
+                    }
+                );
+            }
+
+            for (
+                const selectedOrder
+                of selectedOrdersToReserve
+            ) {
+
+                transaction.update(
+                    selectedOrder.ref,
+                    {
+                        [settlementField(
+                            type,
+                            "DraftSettlementId"
+                        )]: settlementRef.id,
+
+                        [settlementField(
+                            type,
+                            "DraftSettlementStatus"
+                        )]: "DRAFT",
+
+                        [settlementField(
+                            type,
+                            "DraftReservedAt"
+                        )]: serverTimestamp()
+                    }
+                );
+            }
+
+            transaction.set(
+                settlementRef,
+                payload
+            );
+        });
+
+        const wasEditing = Boolean(state.editingDraftId);
+        state.selectedSettlementKeys.clear();
         $("settlementOverallRemark").value = "";
+        resetDraftEditing();
+        state.settlementLoaded = false;
+        state.settlementEntries = [];
+        renderSettlementEntries();
+        toast(
+            wasEditing
+                ? "Draft updated. Selected orders remain reserved."
+                : "Draft saved. Selected orders are now reserved and cannot be settled twice.",
+            "success",
+            6000
+        );
     } catch (errorObject) {
         console.error(errorObject);
-        toast(`Draft could not be saved: ${errorObject.message}`, "error", 6500);
+        toast(`Draft could not be saved: ${errorObject.message}`, "error", 7000);
     } finally {
         button.disabled = false;
     }
@@ -1218,8 +1481,13 @@ async function finalizeSettlement() {
     const beneficiary = currentBeneficiary();
     const clientEntries = selectedEntries();
     const type = state.mainTab;
-    const payload = settlementPayload("FINALIZED");
-    const settlementRef = doc(collection(db, COLLECTIONS.settlements));
+    const existingDraft = state.editingDraftId
+        ? state.settlements.find((item) => item.id === state.editingDraftId)
+        : null;
+    const payload = settlementPayload("FINALIZED", existingDraft);
+    const settlementRef = state.editingDraftId
+        ? doc(db, COLLECTIONS.settlements, state.editingDraftId)
+        : doc(collection(db, COLLECTIONS.settlements));
     const beneficiaryCollection = type === "RESTAURANT" ? COLLECTIONS.restaurants : COLLECTIONS.riders;
     const beneficiaryRef = doc(db, beneficiaryCollection, beneficiary.id);
     const button = $("finalizeSettlementBtn");
@@ -1227,6 +1495,17 @@ async function finalizeSettlement() {
 
     try {
         await runTransaction(db, async (transaction) => {
+            let oldDraftEntries = [];
+            if (state.editingDraftId) {
+                const draftSnapshot = await transaction.get(settlementRef);
+                if (!draftSnapshot.exists()) throw new Error("Draft no longer exists.");
+                const draftData = draftSnapshot.data();
+                if (normalizedText(draftData.status) !== "DRAFT") throw new Error("Only a draft can be finalized from edit mode.");
+                oldDraftEntries = draftData.entries || [];
+                payload.displayId = draftData.displayId || payload.displayId;
+                payload.createdAt = draftData.createdAt || payload.createdAt;
+            }
+
             const beneficiarySnapshot = await transaction.get(beneficiaryRef);
             if (!beneficiarySnapshot.exists()) throw new Error("Beneficiary no longer exists.");
             const freshBeneficiary = { id: beneficiarySnapshot.id, ...beneficiarySnapshot.data() };
@@ -1242,6 +1521,10 @@ async function finalizeSettlement() {
 
                 if (clientEntry.category === "DELIVERED" && baseAlreadySettled(order, type)) {
                     throw new Error(`Order ${clientEntry.orderId} base payout is already settled.`);
+                }
+                const lockedDraftId = draftSettlementId(order, type);
+                if (lockedDraftId && lockedDraftId !== settlementRef.id) {
+                    throw new Error(`Order ${clientEntry.orderId} is reserved in another draft.`);
                 }
                 if (clientEntry.category === "CANCELLED" && !isCancelled(order)) {
                     throw new Error(`Order ${clientEntry.orderId} is no longer cancelled.`);
@@ -1335,6 +1618,22 @@ async function finalizeSettlement() {
             payload.payoutAmount = roundMoney(payout);
             payload.carryForwardAmount = roundMoney(carryAfter);
 
+            const finalizedOrderIds = new Set(freshEntries.map((entry) => entry.order.id));
+            for (const oldEntry of oldDraftEntries) {
+                if (finalizedOrderIds.has(oldEntry.orderDocId)) continue;
+                const oldOrderRef = doc(db, COLLECTIONS.orders, oldEntry.orderDocId);
+                const oldOrderSnapshot = await transaction.get(oldOrderRef);
+                if (!oldOrderSnapshot.exists()) continue;
+                const oldOrder = oldOrderSnapshot.data();
+                if (String(oldOrder[settlementField(type, "DraftSettlementId")] || "") === settlementRef.id) {
+                    transaction.update(oldOrderRef, {
+                        [settlementField(type, "DraftSettlementId")]: deleteField(),
+                        [settlementField(type, "DraftSettlementStatus")]: deleteField(),
+                        [settlementField(type, "DraftReservedAt")]: deleteField()
+                    });
+                }
+            }
+
             transaction.set(settlementRef, payload);
             transaction.update(beneficiaryRef, {
                 settlementCarryForward: roundMoney(carryAfter),
@@ -1345,7 +1644,10 @@ async function finalizeSettlement() {
             for (const entry of freshEntries) {
                 const orderUpdate = {
                     [settlementField(type, "LastSettlementId")]: settlementRef.id,
-                    [settlementField(type, "LastSettledAt")]: serverTimestamp()
+                    [settlementField(type, "LastSettledAt")]: serverTimestamp(),
+                    [settlementField(type, "DraftSettlementId")]: deleteField(),
+                    [settlementField(type, "DraftSettlementStatus")]: deleteField(),
+                    [settlementField(type, "DraftReservedAt")]: deleteField()
                 };
                 if (entry.category === "DELIVERED") {
                     orderUpdate[settlementField(type, "SettlementId")] = settlementRef.id;
@@ -1368,6 +1670,7 @@ async function finalizeSettlement() {
 
         state.selectedSettlementKeys.clear();
         $("settlementOverallRemark").value = "";
+        resetDraftEditing();
         toast(`Settlement ${payload.displayId} finalized for ${money(payload.payoutAmount)}.`, "success", 6000);
         loadSettlementEntries();
     } catch (errorObject) {
@@ -1564,6 +1867,113 @@ function showOrderDetails(orderId) {
             </div>`).join("") : `<div class="audit-entry muted">Not included in any settlement yet.</div>`}
         </div>`;
     openModal("detailModal");
+}
+
+async function editDraftSettlement(settlementId) {
+    const settlement = state.settlements.find((item) => item.id === settlementId);
+    if (!settlement || normalizedText(settlement.status) !== "DRAFT") {
+        toast("Only draft settlements can be edited.", "warning");
+        return;
+    }
+
+    const type = normalizedText(settlement.beneficiaryType);
+    handleMainTab(type);
+    state.editingDraftId = settlement.id;
+    populateSettlementBeneficiary();
+    $("settlementBeneficiary").value = settlement.beneficiaryId || "";
+    $("settlementFromDate").value = settlement.dateFrom || "";
+    $("settlementToDate").value = settlement.dateTo || "";
+    $("settlementOrderSearch").value = "";
+    $("settlementOverallRemark").value = settlement.overallRemark || "";
+    state.settlementSubTab = settlement.category || settlement.entries?.[0]?.entryType || "DELIVERED";
+    all("[data-sub-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.subTab === state.settlementSubTab);
+    });
+    $("saveDraftBtn").textContent = "Update draft";
+    $("finalizeSettlementBtn").textContent = "Finalize this draft";
+    $("draftEditNotice")?.classList.remove("hidden");
+    setText("draftEditNoticeText", `Editing ${settlement.displayId || settlement.id}. Its orders remain reserved until this draft is deleted or finalized.`);
+
+    loadSettlementEntries();
+    const draftOrderIds = new Set((settlement.entries || []).map((entry) => String(entry.orderDocId)));
+    state.selectedSettlementKeys.clear();
+    state.settlementEntries.forEach((entry) => {
+        if (draftOrderIds.has(String(entry.orderDocId))) state.selectedSettlementKeys.add(entry.key);
+    });
+    renderSettlementEntries();
+    document.getElementById("settlementWorkspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteDraftSettlement(settlementId) {
+    const settlement = state.settlements.find((item) => item.id === settlementId);
+    if (!settlement || normalizedText(settlement.status) !== "DRAFT") {
+        toast("Only draft settlements can be deleted.", "warning");
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `Delete draft ${settlement.displayId || settlement.id}?\n\nIts ${settlement.entryCount || settlement.entries?.length || 0} reserved order(s) will become eligible for settlement again.`
+    );
+    if (!confirmed) return;
+
+    const settlementRef = doc(db, COLLECTIONS.settlements, settlement.id);
+    const type = normalizedText(settlement.beneficiaryType);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const snapshot = await transaction.get(settlementRef);
+            if (!snapshot.exists()) throw new Error("Draft no longer exists.");
+            const fresh = snapshot.data();
+            if (normalizedText(fresh.status) !== "DRAFT") throw new Error("Only a draft can be deleted.");
+
+            const ordersToRelease = [];
+
+// -------- READS --------
+
+for (const entry of fresh.entries || []) {
+
+    const orderRef = doc(db, COLLECTIONS.orders, entry.orderDocId);
+
+    const orderSnapshot = await transaction.get(orderRef);
+
+    if (!orderSnapshot.exists()) continue;
+
+    const order = orderSnapshot.data();
+
+    if (
+        String(order[settlementField(type, "DraftSettlementId")] || "") === settlement.id
+    ) {
+        ordersToRelease.push(orderRef);
+    }
+}
+
+// -------- WRITES --------
+
+for (const orderRef of ordersToRelease) {
+
+    transaction.update(orderRef, {
+        [settlementField(type, "DraftSettlementId")]: deleteField(),
+        [settlementField(type, "DraftSettlementStatus")]: deleteField(),
+        [settlementField(type, "DraftReservedAt")]: deleteField()
+    });
+
+}
+
+transaction.delete(settlementRef);
+        });
+
+        if (state.editingDraftId === settlement.id) {
+            resetDraftEditing();
+            state.selectedSettlementKeys.clear();
+            state.settlementLoaded = false;
+            state.settlementEntries = [];
+            renderSettlementEntries();
+        }
+        toast("Draft deleted. Its reserved orders are eligible again.", "success", 6000);
+    } catch (errorObject) {
+        console.error(errorObject);
+        toast(`Draft could not be deleted: ${errorObject.message}`, "error", 7000);
+    }
 }
 
 function showSettlementDetails(settlementId) {
@@ -1804,6 +2214,7 @@ function bindEvents() {
         else renderSettlementEntries();
     }));
     $("settlementBeneficiary").addEventListener("change", () => {
+        if (state.editingDraftId) resetDraftEditing();
         state.settlementLoaded = false;
         state.selectedSettlementKeys.clear();
         renderSettlementEntries();
@@ -1853,6 +2264,10 @@ function bindEvents() {
         if (reverseButton) reverseAdjustment(reverseButton.dataset.reverseAdjustment);
         const viewSettlement = event.target.closest("[data-view-settlement]");
         if (viewSettlement) showSettlementDetails(viewSettlement.dataset.viewSettlement);
+        const editDraft = event.target.closest("[data-edit-draft]");
+        if (editDraft) editDraftSettlement(editDraft.dataset.editDraft);
+        const deleteDraft = event.target.closest("[data-delete-draft]");
+        if (deleteDraft) deleteDraftSettlement(deleteDraft.dataset.deleteDraft);
         const markPaid = event.target.closest("[data-mark-paid]");
         if (markPaid) openPaymentModal(markPaid.dataset.markPaid);
     });
