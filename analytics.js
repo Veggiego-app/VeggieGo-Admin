@@ -1083,7 +1083,14 @@ function renderSettlementHistory() {
             <td>${Number(settlement.entryCount || settlement.entries?.length || 0)}</td>
             <td>${money(settlement.payoutAmount ?? settlement.totalPayout ?? 0)}${numberValue(settlement.carryForwardAmount) ? `<span class="cell-sub">Carry ${money(settlement.carryForwardAmount)}</span>` : ""}</td>
             <td>${statusBadge(status)}</td>
-            <td>${safeText(settlement.paymentReference || "—")}</td>
+            <td>
+                <span class="cell-main">${safeText(settlement.paymentMode || "—")}</span>
+                <span class="cell-sub">${
+                    settlement.paymentReference
+                        ? `${safeText(settlement.paymentReference)} · ${safeText(settlement.paymentDate || "")}`
+                        : "No payment record"
+                }</span>
+            </td>
             <td><div class="section-actions">${actions}</div></td>
         </tr>`;
     }).join("") : emptyRow(9, "No settlement history found.");
@@ -1976,97 +1983,512 @@ transaction.delete(settlementRef);
     }
 }
 
+function settlementPrintableHtml(settlement) {
+    const entries = settlement.entries || [];
+    const paymentLine = normalizedText(settlement.status) === "PAID"
+        ? `
+            <div class="print-payment">
+                <strong>Payment:</strong>
+                ${safeText(settlement.paymentMode || "—")}
+                · ${safeText(settlement.paymentDate || "—")}
+                · Ref: ${safeText(settlement.paymentReference || "—")}
+                ${settlement.paymentRemark ? `· ${safeText(settlement.paymentRemark)}` : ""}
+            </div>
+        `
+        : "";
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>${safeText(settlement.displayId || settlement.id)}</title>
+            <style>
+                body { font-family: Arial, sans-serif; color:#111827; padding:24px; }
+                h1 { margin:0 0 4px; color:#15803d; }
+                .sub { color:#64748b; margin-bottom:18px; }
+                .summary { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0; }
+                .summary div { border:1px solid #cbd5e1; border-radius:8px; padding:10px; }
+                .summary small { display:block; color:#64748b; margin-bottom:5px; }
+                table { width:100%; border-collapse:collapse; margin-top:16px; font-size:12px; }
+                th { background:#15803d; color:white; padding:8px; text-align:left; }
+                td { border:1px solid #dbe3eb; padding:8px; vertical-align:top; }
+                .num { text-align:right; white-space:nowrap; }
+                .remark, .print-payment { margin-top:14px; padding:10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; }
+                .footer { margin-top:20px; color:#64748b; text-align:center; font-size:11px; }
+                @media print { button { display:none!important; } }
+            </style>
+        </head>
+        <body>
+            <h1>VeggieGo Settlement</h1>
+            <div class="sub">
+                ${safeText(settlement.displayId || settlement.id)}
+                · ${safeText(settlement.beneficiaryType || "")}
+                · ${safeText(settlement.beneficiaryName || settlement.beneficiaryId || "")}
+            </div>
+
+            <div class="summary">
+                <div><small>Status</small><strong>${safeText(settlement.status || "DRAFT")}</strong></div>
+                <div><small>Period</small><strong>${safeText(settlement.dateFrom || "—")} – ${safeText(settlement.dateTo || "—")}</strong></div>
+                <div><small>Orders</small><strong>${Number(settlement.entryCount || entries.length || 0)}</strong></div>
+                <div><small>Final Payout</small><strong>${money(settlement.payoutAmount || 0)}</strong></div>
+                <div><small>Base</small><strong>${money(settlement.baseAmount || 0)}</strong></div>
+                <div><small>Credits</small><strong>${money(settlement.creditAmount || 0, true)}</strong></div>
+                <div><small>Debits</small><strong>${money(-numberValue(settlement.debitAmount))}</strong></div>
+                <div><small>Carry Forward</small><strong>${money(settlement.carryForwardAmount || 0)}</strong></div>
+            </div>
+
+            <div class="remark">
+                <strong>Overall Remark:</strong>
+                ${safeText(settlement.overallRemark || "No remark")}
+            </div>
+
+            ${paymentLine}
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Entry</th>
+                        <th class="num">Item + Packaging / Base + Surge</th>
+                        <th class="num">Commission / Tip</th>
+                        <th class="num">Base Payout</th>
+                        <th class="num">Credit</th>
+                        <th class="num">Debit</th>
+                        <th class="num">Net</th>
+                        <th>Remark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${entries.length ? entries.map((entry) => `
+                        <tr>
+                            <td>#${safeText(entry.orderId || entry.orderDocId)}</td>
+                            <td>${safeText(entry.entryType || "—")}</td>
+                            <td class="num">${money(entry.componentAmount || 0)}</td>
+                            <td class="num">${entry.deductionAmount === null ? "—" : money(entry.deductionAmount || 0)}</td>
+                            <td class="num">${money(entry.baseAmount || 0)}</td>
+                            <td class="num">${money(entry.creditAmount || 0, true)}</td>
+                            <td class="num">${money(-numberValue(entry.debitAmount))}</td>
+                            <td class="num">${money(entry.netAmount || 0)}</td>
+                            <td>${safeText(entry.latestRemark || "—")}</td>
+                        </tr>
+                    `).join("") : `<tr><td colspan="9">No entries.</td></tr>`}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Generated from VeggieGo Admin Finance & Settlement
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+function printSettlement(settlementId) {
+    const settlement = state.settlements.find((item) => item.id === settlementId);
+    if (!settlement) {
+        toast("Settlement not found.", "error");
+        return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=1100,height=800");
+    if (!printWindow) {
+        toast("Popup was blocked. Allow popups and try again.", "error");
+        return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(settlementPrintableHtml(settlement));
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+    };
+}
+
+function saveSettlementPdf(settlementId) {
+    toast("Print dialog me Destination → Save as PDF select karein.", "info", 6000);
+    printSettlement(settlementId);
+}
+
 function showSettlementDetails(settlementId) {
     const settlement = state.settlements.find((item) => item.id === settlementId);
     if (!settlement) return;
+
     setText("detailModalTitle", settlement.displayId || settlement.id);
+
     const entries = settlement.entries || [];
+    const status = normalizedText(settlement.status || "DRAFT");
+
     $("detailModalContent").innerHTML = `
+        <div class="section-actions" style="justify-content:flex-end;margin-bottom:14px">
+            <button
+                class="btn btn-secondary"
+                data-print-settlement="${safeText(settlement.id)}"
+                type="button"
+            >
+                Print
+            </button>
+
+            <button
+                class="btn btn-primary"
+                data-pdf-settlement="${safeText(settlement.id)}"
+                type="button"
+            >
+                Save PDF
+            </button>
+
+            ${
+                status === "FINALIZED"
+                    ? `
+                        <button
+                            class="btn btn-success"
+                            data-mark-paid="${safeText(settlement.id)}"
+                            type="button"
+                        >
+                            Mark Paid
+                        </button>
+                    `
+                    : ""
+            }
+        </div>
+
         <div class="detail-summary">
             <article><small>Partner</small><strong>${safeText(settlement.beneficiaryName || settlement.beneficiaryId)}</strong></article>
-            <article><small>Status</small><strong>${safeText(settlement.status)}</strong></article>
+            <article><small>Type</small><strong>${safeText(settlement.beneficiaryType || "—")}</strong></article>
+            <article><small>Status</small><strong>${safeText(settlement.status || "DRAFT")}</strong></article>
+            <article><small>Period</small><strong>${safeText(settlement.dateFrom || "—")} – ${safeText(settlement.dateTo || "—")}</strong></article>
+            <article><small>Orders</small><strong>${Number(settlement.entryCount || entries.length || 0)}</strong></article>
             <article><small>Base</small><strong>${money(settlement.baseAmount || 0)}</strong></article>
             <article><small>Credits</small><strong class="positive">${money(settlement.creditAmount || 0, true)}</strong></article>
             <article><small>Debits</small><strong class="negative">${money(-numberValue(settlement.debitAmount))}</strong></article>
             <article><small>Previous carry</small><strong>${money(settlement.carryForwardBefore || 0)}</strong></article>
-            <article><small>Paid / payable</small><strong>${money(settlement.payoutAmount || 0)}</strong></article>
+            <article><small>Final payout</small><strong>${money(settlement.payoutAmount || 0)}</strong></article>
             <article><small>New carry</small><strong>${money(settlement.carryForwardAmount || 0)}</strong></article>
+            <article><small>Created</small><strong>${safeText(formatDate(settlement.createdAt, true))}</strong></article>
         </div>
-        <p class="inline-alert"><strong>Overall remark:</strong> ${safeText(settlement.overallRemark || "No remark")}</p>
+
+        <p class="inline-alert">
+            <strong>Overall remark:</strong>
+            ${safeText(settlement.overallRemark || "No remark")}
+        </p>
+
+        ${
+            status === "PAID"
+                ? `
+                    <div class="inline-alert">
+                        <strong>Payment Record</strong><br>
+                        Mode: ${safeText(settlement.paymentMode || "—")}<br>
+                        Date: ${safeText(settlement.paymentDate || "—")}<br>
+                        Reference: ${safeText(settlement.paymentReference || "—")}<br>
+                        Remark: ${safeText(settlement.paymentRemark || "—")}<br>
+                        Paid By: ${safeText(settlement.paidByEmail || settlement.paidByUid || "—")}
+                    </div>
+                `
+                : ""
+        }
+
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Order</th><th>Entry type</th><th>Sales / Base+Surge</th><th>Commission / Tip</th><th>Base payout</th><th>Credit</th><th>Debit</th><th>Net</th><th>Remark</th></tr></thead>
-                <tbody>${entries.length ? entries.map((entry) => `<tr>
-                    <td>#${safeText(entry.orderId)}</td><td>${safeText(entry.entryType)}</td>
-                    <td>${money(entry.componentAmount || 0)}</td><td>${entry.deductionAmount === null ? "—" : money(entry.deductionAmount || 0)}</td>
-                    <td>${money(entry.baseAmount)}</td><td class="positive">${money(entry.creditAmount, true)}</td>
-                    <td class="negative">${money(-numberValue(entry.debitAmount))}</td><td>${money(entry.netAmount)}</td>
-                    <td>${safeText(entry.latestRemark || "—")}</td>
-                </tr>`).join("") : emptyRow(9, "No entries.")}</tbody>
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Entry type</th>
+                        <th>Sales / Base+Surge</th>
+                        <th>Commission / Tip</th>
+                        <th>Base payout</th>
+                        <th>Credit</th>
+                        <th>Debit</th>
+                        <th>Net</th>
+                        <th>Remark</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${
+                        entries.length
+                            ? entries.map((entry) => `
+                                <tr>
+                                    <td>
+                                        <button
+                                            class="order-link"
+                                            data-order-detail="${safeText(entry.orderDocId)}"
+                                            type="button"
+                                        >
+                                            #${safeText(entry.orderId)}
+                                        </button>
+                                    </td>
+                                    <td>${safeText(entry.entryType)}</td>
+                                    <td>${money(entry.componentAmount || 0)}</td>
+                                    <td>${entry.deductionAmount === null ? "—" : money(entry.deductionAmount || 0)}</td>
+                                    <td>${money(entry.baseAmount)}</td>
+                                    <td class="positive">${money(entry.creditAmount, true)}</td>
+                                    <td class="negative">${money(-numberValue(entry.debitAmount))}</td>
+                                    <td>${money(entry.netAmount)}</td>
+                                    <td>${safeText(entry.latestRemark || "—")}</td>
+                                </tr>
+                            `).join("")
+                            : emptyRow(9, "No entries.")
+                    }
+                </tbody>
             </table>
         </div>
-        ${settlement.paymentReference ? `<p class="helper-text">Paid ${safeText(settlement.paymentDate || "")} · Reference ${safeText(settlement.paymentReference)} · ${safeText(settlement.paymentRemark || "")}</p>` : ""}`;
+    `;
+
     openModal("detailModal");
 }
-
 function openPaymentModal(settlementId) {
     const settlement = state.settlements.find((item) => item.id === settlementId);
-    if (!settlement || normalizedText(settlement.status) !== "FINALIZED") return;
+
+    if (
+        !settlement ||
+        normalizedText(settlement.status) !== "FINALIZED"
+    ) {
+        return;
+    }
+
     $("paymentForm").reset();
     $("paymentSettlementId").value = settlement.id;
     $("paymentDate").value = dateInputValue();
-    setText("paymentModalTitle", `Mark ${settlement.displayId || settlement.id} paid`);
+
+    const referenceInput = $("paymentReference");
+
+    if (
+        referenceInput &&
+        !$("paymentMode")
+    ) {
+        const wrapper = document.createElement("label");
+
+        wrapper.className = "field";
+        wrapper.innerHTML = `
+            <span>Payment Mode *</span>
+
+            <select id="paymentMode" required>
+                <option value="">Select payment mode</option>
+                <option value="CASH">Cash</option>
+                <option value="UPI">UPI / QR</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CHEQUE">Cheque</option>
+            </select>
+        `;
+
+        referenceInput
+            .closest("label, .field")
+            ?.before(wrapper);
+    }
+
+    setText(
+        "paymentModalTitle",
+        `Mark ${settlement.displayId || settlement.id} paid`
+    );
+
+    closeModal("detailModal");
     openModal("paymentModal");
 }
 
 async function markSettlementPaid(event) {
     event.preventDefault();
-    const settlementId = $("paymentSettlementId").value;
-    const reference = $("paymentReference").value.trim();
-    const paymentDate = $("paymentDate").value;
-    const paymentRemark = $("paymentRemark").value.trim();
-    if (reference.length < 3 || !paymentDate) {
-        toast("Payment date and reference are required.", "error");
+
+    const settlementId =
+        $("paymentSettlementId").value;
+
+    const paymentMode =
+        normalizedText(
+            $("paymentMode")?.value || ""
+        );
+
+    const reference =
+        $("paymentReference").value.trim();
+
+    const paymentDate =
+        $("paymentDate").value;
+
+    const paymentRemark =
+        $("paymentRemark").value.trim();
+
+    if (!paymentMode) {
+        toast(
+            "Select payment mode.",
+            "error"
+        );
         return;
     }
-    const settlementRef = doc(db, COLLECTIONS.settlements, settlementId);
+
+    if (!paymentDate) {
+        toast(
+            "Payment date is required.",
+            "error"
+        );
+        return;
+    }
+
+    const referenceRequired =
+        paymentMode !== "CASH";
+
+    if (
+        referenceRequired &&
+        reference.length < 3
+    ) {
+        toast(
+            "UPI, Bank Transfer aur Cheque ke liye reference/UTR minimum 3 characters ka hona chahiye.",
+            "error",
+            6500
+        );
+        return;
+    }
+
+    const finalReference =
+        referenceRequired
+            ? reference
+            : (reference || "CASH");
+
+    const settlementRef =
+        doc(
+            db,
+            COLLECTIONS.settlements,
+            settlementId
+        );
+
     try {
-        await runTransaction(db, async (transaction) => {
-            const snapshot = await transaction.get(settlementRef);
-            if (!snapshot.exists()) throw new Error("Settlement no longer exists.");
-            const settlement = snapshot.data();
-            if (normalizedText(settlement.status) !== "FINALIZED") throw new Error("Only a finalized settlement can be marked paid.");
-            transaction.update(settlementRef, {
-                status: "PAID",
-                paymentDate,
-                paymentReference: reference,
-                paymentRemark,
-                paidAt: serverTimestamp(),
-                paidByUid: state.user?.uid || "",
-                paidByEmail: state.user?.email || "",
-                updatedAt: serverTimestamp()
-            });
-            for (const entry of settlement.entries || []) {
-                if (entry.entryType === "DELIVERED") {
-                    const orderRef = doc(db, COLLECTIONS.orders, entry.orderDocId);
-                    transaction.update(orderRef, {
-                        [settlementField(settlement.beneficiaryType, "SettlementStatus")]: "PAID",
-                        [settlementField(settlement.beneficiaryType, "PaidAt")]: serverTimestamp()
-                    });
+        await runTransaction(
+            db,
+            async (transaction) => {
+
+                const snapshot =
+                    await transaction.get(
+                        settlementRef
+                    );
+
+                if (!snapshot.exists()) {
+                    throw new Error(
+                        "Settlement no longer exists."
+                    );
                 }
-                for (const adjustmentId of entry.adjustmentIds || []) {
-                    transaction.update(doc(db, COLLECTIONS.adjustments, adjustmentId), {
-                        settlementStatus: "PAID",
-                        paidAt: serverTimestamp()
-                    });
+
+                const settlement =
+                    snapshot.data();
+
+                if (
+                    normalizedText(
+                        settlement.status
+                    ) !== "FINALIZED"
+                ) {
+                    throw new Error(
+                        "Only a finalized settlement can be marked paid."
+                    );
+                }
+
+                transaction.update(
+                    settlementRef,
+                    {
+                        status: "PAID",
+                        paymentMode,
+                        paymentDate,
+                        paymentReference:
+                            finalReference,
+                        paymentRemark,
+                        paidAt:
+                            serverTimestamp(),
+                        paidByUid:
+                            state.user?.uid || "",
+                        paidByEmail:
+                            state.user?.email || "",
+                        updatedAt:
+                            serverTimestamp()
+                    }
+                );
+
+                for (
+                    const entry
+                    of settlement.entries || []
+                ) {
+
+                    if (
+                        entry.entryType ===
+                        "DELIVERED"
+                    ) {
+                        const orderRef =
+                            doc(
+                                db,
+                                COLLECTIONS.orders,
+                                entry.orderDocId
+                            );
+
+                        transaction.update(
+                            orderRef,
+                            {
+                                [settlementField(
+                                    settlement.beneficiaryType,
+                                    "SettlementStatus"
+                                )]: "PAID",
+
+                                [settlementField(
+                                    settlement.beneficiaryType,
+                                    "PaidAt"
+                                )]: serverTimestamp(),
+
+                                [settlementField(
+                                    settlement.beneficiaryType,
+                                    "SettlementPaymentMode"
+                                )]: paymentMode,
+
+                                [settlementField(
+                                    settlement.beneficiaryType,
+                                    "SettlementPaymentDate"
+                                )]: paymentDate,
+
+                                [settlementField(
+                                    settlement.beneficiaryType,
+                                    "SettlementPaymentReference"
+                                )]: finalReference,
+
+                                [settlementField(
+                                    settlement.beneficiaryType,
+                                    "SettlementPaymentRemark"
+                                )]: paymentRemark
+                            }
+                        );
+                    }
+
+                    for (
+                        const adjustmentId
+                        of entry.adjustmentIds || []
+                    ) {
+                        transaction.update(
+                            doc(
+                                db,
+                                COLLECTIONS.adjustments,
+                                adjustmentId
+                            ),
+                            {
+                                settlementStatus:
+                                    "PAID",
+                                paidAt:
+                                    serverTimestamp()
+                            }
+                        );
+                    }
                 }
             }
-        });
+        );
+
         closeModal("paymentModal");
-        toast("Settlement marked as paid with payment reference.", "success");
+
+        toast(
+            `Settlement marked paid via ${paymentMode.replaceAll("_", " ")}.`,
+            "success",
+            6000
+        );
+
     } catch (errorObject) {
         console.error(errorObject);
-        toast(`Payment update failed: ${errorObject.message}`, "error", 7000);
+
+        toast(
+            `Payment update failed: ${errorObject.message}`,
+            "error",
+            7000
+        );
     }
 }
 
@@ -2156,6 +2578,7 @@ function exportHistory() {
         "Final Payout": settlement.payoutAmount || 0,
         "New Carry": settlement.carryForwardAmount || 0,
         Status: settlement.status,
+        "Payment Mode": settlement.paymentMode || "",
         "Payment Reference": settlement.paymentReference || "",
         "Payment Date": settlement.paymentDate || "",
         Remark: settlement.overallRemark || ""
@@ -2264,6 +2687,13 @@ function bindEvents() {
         if (reverseButton) reverseAdjustment(reverseButton.dataset.reverseAdjustment);
         const viewSettlement = event.target.closest("[data-view-settlement]");
         if (viewSettlement) showSettlementDetails(viewSettlement.dataset.viewSettlement);
+
+        const printSettlementButton = event.target.closest("[data-print-settlement]");
+        if (printSettlementButton) printSettlement(printSettlementButton.dataset.printSettlement);
+
+        const pdfSettlementButton = event.target.closest("[data-pdf-settlement]");
+        if (pdfSettlementButton) saveSettlementPdf(pdfSettlementButton.dataset.pdfSettlement);
+
         const editDraft = event.target.closest("[data-edit-draft]");
         if (editDraft) editDraftSettlement(editDraft.dataset.editDraft);
         const deleteDraft = event.target.closest("[data-delete-draft]");
