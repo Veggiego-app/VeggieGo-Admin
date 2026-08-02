@@ -2,503 +2,382 @@
 <html lang="en">
 
 <head>
-
-<meta charset="UTF-8">
-
-<meta
-name="viewport"
-content="width=device-width, initial-scale=1.0"
->
-
-<title>
-Add Restaurant
-</title>
-
-<link
-rel="stylesheet"
-href="style.css"
->
-
-<link
-rel="stylesheet"
-href="restaurant.css"
->
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Restaurant</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="restaurant.css">
 </head>
 
 <body>
-<div class="main">
-
-<h1>
-🍃 Add Restaurant
-</h1>
-<div class="add-restaurant-grid">
-
-<div class="details-card basic-card">
-
-<h2>
-Basic Information
-</h2>
-
-<input
-id="restaurantName"
-placeholder="Restaurant Name"
->
-
-<input
-id="ownerName"
-placeholder="Owner Name"
->
-
-<input
-id="ownerPhone"
-placeholder="Owner Phone"
->
-
-<input
-id="restaurantPhone"
-placeholder="Restaurant Phone"
->
-
-<input
-id="email"
-placeholder="Email"
->
-
-</div>
-
-<div class="details-card image-card">
-<h2>
-📸 Restaurant Images
-</h2>
-
-<label>
-Restaurant Logo
-</label>
-
-<input
-type="file"
-id="restaurantLogo"
-accept="image/*"
->
-<img
-id="logoPreview"
-style="
-display:none;
-width:120px;
-height:120px;
-object-fit:cover;
-border-radius:16px;
-margin-top:15px;
-border:1px solid #374151;
-"
-/>
-
-<label>
-Restaurant Banner
-</label>
-
-<input
-type="file"
-id="restaurantBanner"
-accept="image/*"
->
-<img
-id="bannerPreview"
-style="
-display:none;
-width:100%;
-height:180px;
-object-fit:cover;
-border-radius:16px;
-margin-top:15px;
-border:1px solid #374151;
-"
-/>
-<div
-class="restaurant-preview"
->
-
-<img
-id="liveLogo"
-class="live-logo"
->
-
-<h3
-id="liveName"
->
-Restaurant Name
-</h3>
-
-<p
-id="liveCity"
->
-City
-</p>
-
-</div>
-
-</div>
-
-<div class="details-card">
-
-<h2>
-📍 Location
-</h2>
-
-<input
-id="addressLine1"
-placeholder="Address Line 1"
->
-
-<input
-id="addressLine2"
-placeholder="Address Line 2"
->
-
-<input
-id="area"
-placeholder="Area"
->
-
-<input
-id="city"
-placeholder="City"
->
-
-<input
-id="state"
-placeholder="State"
->
-
-<input
-id="pincode"
-placeholder="Pincode"
->
-
-<input
-id="latitude"
-placeholder="Latitude"
-readonly
->
-
-<input
-id="longitude"
-placeholder="Longitude"
-readonly
->
-
-<input
-id="searchAddress"
-placeholder="Search Location"
->
-
-<div id="map"></div>
-
-</div>
-
-<div class="details-card">
-
-<h2>
-💰 Business Settings
-</h2>
-
-<input
-type="number"
-id="commissionPercent"
-placeholder="Commission %"
-value="30"
->
-
-<input
-type="number"
-id="packagingFee"
-placeholder="Packaging Fee"
-value="0"
->
-
-<input
-type="number"
-id="minimumOrder"
-placeholder="Minimum Order"
-value="100"
->
-
-<input
-type="number"
-id="maxDeliveryDistance"
-placeholder="Max Delivery Distance (KM)"
-value="15"
->
-
-<select id="zone">
-
-<option>
-Gandhidham
-</option>
-
-<option>
-Adipur
-</option>
-
-<option>
-Anjar
-</option>
-
-<option>
-Bhuj
-</option>
-
-</select>
-
-</div>
-
-<div class="details-card">
-
-<h2>
-🧾 GST / FSSAI
-</h2>
-
-<input
-id="gstNumber"
-placeholder="GST Number"
->
-
-<input
-id="fssaiNumber"
-placeholder="FSSAI Number"
->
-
-<label>
-GST Certificate
-</label>
-
-<input
-type="file"
-id="gstDocument"
->
-<img
-id="gstPreview"
-style="
-display:none;
-width:100%;
-max-height:250px;
-object-fit:contain;
-margin-top:15px;
-border-radius:12px;
-border:1px solid #374151;
-"
-/>
-
-<label>
-FSSAI Certificate
-</label>
-
-<input
-type="file"
-id="fssaiDocument"
->
-<img
-id="fssaiPreview"
-style="
-display:none;
-width:100%;
-max-height:250px;
-object-fit:contain;
-margin-top:15px;
-border-radius:12px;
-border:1px solid #374151;
-"
-/>
-
-</div>
-
-<div class="details-card">
-
-<h2>
-🏦 Bank Details
-</h2>
-
-<input
-id="bankName"
-placeholder="Bank Name"
->
-
-<input
-id="accountHolder"
-placeholder="Account Holder"
->
-
-<input
-id="accountNumber"
-placeholder="Account Number"
->
-
-<input
-id="ifscCode"
-placeholder="IFSC Code"
->
-
-<input
-id="upiId"
-placeholder="UPI ID"
->
-
-</div>
-
-<div class="details-card">
-
-<h2>
-🔐 Login Details
-</h2>
-
-<input
-id="loginEmail"
-placeholder="Login Email"
->
-
-<input
-type="password"
-id="loginPassword"
-placeholder="Password"
->
-
-</div>
-
-<div class="details-card">
-
-<h2>
-🕒 Restaurant Timing
-</h2>
-
-<div id="timingSlotsContainer">
-
-<div class="weekly-slot-row">
-
-<div class="time-box">
-
-<label>
-START
-</label>
-
-<input
-type="time"
-class="slot-start"
->
-
-</div>
-
-<div class="slot-arrow">
-→
-</div>
-
-<div class="time-box">
-
-<label>
-END
-</label>
-
-<input
-type="time"
-class="slot-end"
->
-
-</div>
-
-<button
-type="button"
-class="delete-slot-btn"
->
-DELETE
-</button>
-
-</div>
-
-</div>
-
-<button
-type="button"
-id="addSlotBtn"
-class="add-slot-btn"
->
-
-+ Add Time Slot
-
-</button>
-
-</div>
-
-<div class="add-restaurant-actions">
-
-<button
-id="createRestaurantBtn"
-class="approve-btn-table"
-style="
-width:100%;
-padding:15px;
-font-size:18px;
-"
->
-
-🚀 CREATE RESTAURANT
-
-</button>
-
-</div>
-
-</div>
-
-<script
-src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGxua4ApZbRdYP1wA6e8b4AwvqdKxrZVc&libraries=places"
-></script>
-
-<div
-id="loadingOverlay"
-class="loading-overlay"
->
-
-<div class="spinner"></div>
-
-<div>
-Creating Restaurant...
-</div>
-
-</div>
-<div
-id="successModal"
-class="success-modal"
->
-
-<div
-class="success-content"
->
-
-<h2>
-✅ Restaurant Created
-</h2>
-
-<p>
-Restaurant added successfully
-</p>
-
-<button
-onclick="
-window.location.href=
-'restaurants.html'
-"
->
-
-Go To Restaurants
-
-</button>
-
-</div>
-
-</div>
-
-<script
-type="module"
-src="add-restaurant.js"
-></script>
+    <main class="main add-restaurant-page">
+        <header class="add-restaurant-header">
+            <div>
+                <h1>🍃 Add Restaurant</h1>
+                <p>Create restaurant profile, login access, location, business settings and timings.</p>
+            </div>
+            <span class="admin-badge">👤 Admin</span>
+        </header>
+
+        <div id="formMessage" class="form-message" role="alert" aria-live="polite"></div>
+
+        <form id="addRestaurantForm" novalidate>
+            <div class="add-restaurant-grid top-grid">
+                <section class="details-card basic-card">
+                    <h2>🏪 Basic Information</h2>
+
+                    <div class="form-field">
+                        <label for="restaurantName">Restaurant Name <span class="required">*</span></label>
+                        <input id="restaurantName" autocomplete="organization" placeholder="Restaurant Name" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="ownerName">Owner Name <span class="required">*</span></label>
+                        <input id="ownerName" autocomplete="name" placeholder="Owner Name" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="restaurantPhone">Restaurant Mobile (OTP Login) <span class="required">*</span></label>
+                        <input
+                            type="tel"
+                            id="restaurantPhone"
+                            inputmode="numeric"
+                            autocomplete="tel"
+                            maxlength="10"
+                            pattern="[6-9][0-9]{9}"
+                            placeholder="10-digit mobile number"
+                            required
+                        >
+                        <small class="success-helper">✓ Android App login with OTP</small>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="ownerPhone">Owner Mobile <span class="optional">(Optional)</span></label>
+                        <input
+                            type="tel"
+                            id="ownerPhone"
+                            inputmode="numeric"
+                            autocomplete="tel"
+                            maxlength="10"
+                            pattern="[6-9][0-9]{9}"
+                            placeholder="10-digit mobile number"
+                        >
+                    </div>
+
+                    <div class="form-field">
+                        <label for="email">Contact Email <span class="optional">(Optional)</span></label>
+                        <input type="email" id="email" autocomplete="email" placeholder="restaurant@example.com">
+                    </div>
+                </section>
+
+                <section class="details-card image-card">
+                    <h2>📸 Restaurant Images</h2>
+                    <div class="image-section-grid">
+                        <div class="image-upload-column">
+                            <div class="form-field">
+                                <label for="restaurantLogo">Restaurant Logo <span class="optional">(Optional)</span></label>
+                                <label class="file-drop" for="restaurantLogo">
+                                    <span class="upload-icon">☁</span>
+                                    <strong>Click to upload logo</strong>
+                                    <small>JPG, PNG or WebP · Max 5 MB</small>
+                                </label>
+                                <input class="file-input" type="file" id="restaurantLogo" accept="image/jpeg,image/png,image/webp">
+                                <span id="logoFileName" class="selected-file-name"></span>
+                            </div>
+
+                            <div class="form-field">
+                                <label for="restaurantBanner">Restaurant Banner <span class="optional">(Optional)</span></label>
+                                <label class="file-drop banner-drop" for="restaurantBanner">
+                                    <span class="upload-icon">☁</span>
+                                    <strong>Click to upload banner</strong>
+                                    <small>JPG, PNG or WebP · Max 5 MB</small>
+                                </label>
+                                <input class="file-input" type="file" id="restaurantBanner" accept="image/jpeg,image/png,image/webp">
+                                <span id="bannerFileName" class="selected-file-name"></span>
+                            </div>
+                        </div>
+
+                        <div class="customer-preview-wrap">
+                            <label>Customer App Preview</label>
+                            <div class="restaurant-preview">
+                                <div class="preview-banner-wrap">
+                                    <img id="bannerPreview" alt="Restaurant banner preview">
+                                    <div id="bannerPlaceholder" class="preview-placeholder">Restaurant Banner</div>
+                                </div>
+                                <div class="preview-info">
+                                    <div class="preview-logo-wrap">
+                                        <img id="logoPreview" alt="Restaurant logo preview">
+                                        <span id="logoPlaceholder">🍽️</span>
+                                    </div>
+                                    <div>
+                                        <h3 id="liveName">Restaurant Name</h3>
+                                        <p id="liveCity">City</p>
+                                        <span class="preview-open-badge">OPEN</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="details-card location-card">
+                <h2>📍 Address &amp; Map Location</h2>
+                <div class="location-layout">
+                    <div class="address-fields">
+                        <div class="form-field full-field">
+                            <label for="searchAddress">Search Location</label>
+                            <input id="searchAddress" placeholder="Search area, street or landmark">
+                            <small id="locationStatus" class="field-helper">Search a location, click the map, or move the pin to confirm.</small>
+                        </div>
+
+                        <div class="form-field full-field">
+                            <label for="addressLine1">Address Line 1 <span class="required">*</span></label>
+                            <input id="addressLine1" autocomplete="address-line1" placeholder="House/Shop No., Building, Street" required>
+                        </div>
+
+                        <div class="form-field full-field">
+                            <label for="addressLine2">Address Line 2 <span class="optional">(Optional)</span></label>
+                            <input id="addressLine2" autocomplete="address-line2" placeholder="Locality or Landmark">
+                        </div>
+
+                        <div class="form-field full-field">
+                            <label for="area">Area <span class="required">*</span></label>
+                            <input id="area" placeholder="Area" required>
+                        </div>
+
+                        <div class="two-field-row">
+                            <div class="form-field">
+                                <label for="city">City <span class="required">*</span></label>
+                                <input id="city" autocomplete="address-level2" placeholder="City" required>
+                            </div>
+                            <div class="form-field">
+                                <label for="state">State <span class="required">*</span></label>
+                                <input id="state" autocomplete="address-level1" placeholder="State" required>
+                            </div>
+                        </div>
+
+                        <div class="form-field full-field">
+                            <label for="pincode">Pincode <span class="required">*</span></label>
+                            <input
+                                id="pincode"
+                                inputmode="numeric"
+                                autocomplete="postal-code"
+                                maxlength="6"
+                                pattern="[0-9]{6}"
+                                placeholder="6-digit pincode"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="map-column">
+                        <div id="map"></div>
+                        <div class="coordinates-row">
+                            <div class="form-field">
+                                <label for="latitude">Latitude</label>
+                                <input id="latitude" readonly>
+                            </div>
+                            <div class="form-field">
+                                <label for="longitude">Longitude</label>
+                                <input id="longitude" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="add-restaurant-grid business-grid">
+                <section class="details-card">
+                    <h2>💰 Business Settings</h2>
+
+                    <div class="form-field">
+                        <label for="commissionPercent">Commission (%) <span class="required">*</span></label>
+                        <input type="number" id="commissionPercent" min="0" max="100" step="0.01" value="30" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="packagingFee">Packaging Fee (₹)</label>
+                        <input type="number" id="packagingFee" min="0" step="0.01" value="0">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="minimumOrder">Minimum Order (₹) <span class="required">*</span></label>
+                        <input type="number" id="minimumOrder" min="0" step="0.01" value="100" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="maxDeliveryDistance">Max Delivery Distance (KM) <span class="required">*</span></label>
+                        <input type="number" id="maxDeliveryDistance" min="0.1" step="0.1" value="15" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="zone">Zone <span class="required">*</span></label>
+                        <select id="zone" required>
+                            <option value="Gandhidham">Gandhidham</option>
+                            <option value="Adipur">Adipur</option>
+                            <option value="Bhuj">Bhuj</option>
+                            <option value="Rajula">Rajula</option>
+                        </select>
+                    </div>
+                </section>
+
+                <section class="details-card">
+                    <h2>🧾 GST / FSSAI</h2>
+
+                    <div class="form-field">
+                        <label for="gstNumber">GST Number <span class="optional">(Optional)</span></label>
+                        <input id="gstNumber" maxlength="15" placeholder="GST Number">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="fssaiNumber">FSSAI Number <span class="optional">(Optional)</span></label>
+                        <input id="fssaiNumber" inputmode="numeric" maxlength="14" placeholder="FSSAI Number">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="gstDocument">GST Certificate <span class="optional">(Optional)</span></label>
+                        <input type="file" id="gstDocument" accept="application/pdf,image/jpeg,image/png,image/webp">
+                        <small id="gstFileName" class="selected-file-name">PDF or image · Max 10 MB</small>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="fssaiDocument">FSSAI Certificate <span class="optional">(Optional)</span></label>
+                        <input type="file" id="fssaiDocument" accept="application/pdf,image/jpeg,image/png,image/webp">
+                        <small id="fssaiFileName" class="selected-file-name">PDF or image · Max 10 MB</small>
+                    </div>
+                </section>
+
+                <section class="details-card">
+                    <h2>🏦 Bank Details <span class="heading-optional">(Optional)</span></h2>
+
+                    <div class="form-field">
+                        <label for="bankName">Bank Name</label>
+                        <input id="bankName" autocomplete="off" placeholder="Bank Name">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="accountHolder">Account Holder</label>
+                        <input id="accountHolder" autocomplete="off" placeholder="Account Holder Name">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="accountNumber">Account Number</label>
+                        <input id="accountNumber" inputmode="numeric" autocomplete="off" placeholder="Account Number">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="ifscCode">IFSC Code</label>
+                        <input id="ifscCode" maxlength="11" autocomplete="off" placeholder="IFSC Code">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="upiId">UPI ID</label>
+                        <input id="upiId" autocomplete="off" placeholder="name@bank">
+                    </div>
+                    <small class="field-helper">Can be completed before the first settlement.</small>
+                </section>
+            </div>
+
+            <div class="access-timing-grid">
+                <section class="details-card access-card">
+                    <h2>🔐 Restaurant Access</h2>
+
+                    <div class="toggle-row">
+                        <div>
+                            <strong>Enable Restaurant Web Panel Login</strong>
+                            <small>Keep OFF if restaurant will use only the Android App.</small>
+                        </div>
+                        <label class="switch" aria-label="Enable Restaurant Web Panel Login">
+                            <input type="checkbox" id="webPanelEnabled">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div id="webLoginFields" class="web-login-fields is-disabled">
+                        <div class="form-field">
+                            <label for="loginEmail">Login Email / ID <span class="required">*</span></label>
+                            <input type="email" id="loginEmail" autocomplete="username" placeholder="restaurant@example.com" disabled>
+                        </div>
+
+                        <div class="two-field-row password-row">
+                            <div class="form-field">
+                                <label for="loginPassword">Password <span class="required">*</span></label>
+                                <div class="password-input-wrap">
+                                    <input type="password" id="loginPassword" minlength="8" autocomplete="new-password" placeholder="Minimum 8 characters" disabled>
+                                    <button type="button" class="password-toggle" data-target="loginPassword" aria-label="Show password">👁</button>
+                                </div>
+                            </div>
+
+                            <div class="form-field">
+                                <label for="confirmPassword">Confirm Password <span class="required">*</span></label>
+                                <div class="password-input-wrap">
+                                    <input type="password" id="confirmPassword" minlength="8" autocomplete="new-password" placeholder="Re-enter password" disabled>
+                                    <button type="button" class="password-toggle" data-target="confirmPassword" aria-label="Show password">👁</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" id="generatePasswordBtn" class="secondary-green-btn" disabled>Generate Password</button>
+                        <small class="field-helper">Password is stored only in Firebase Authentication, never in Firestore.</small>
+                    </div>
+                </section>
+
+                <section class="details-card timing-card">
+                    <div class="card-heading-row">
+                        <div>
+                            <h2>🕒 Weekly Restaurant Timing</h2>
+                            <small>Set one or more opening slots for each day.</small>
+                        </div>
+                        <button type="button" id="copyMondayBtn" class="outline-btn">Copy Monday to All Days</button>
+                    </div>
+
+                    <div class="timing-table-head" aria-hidden="true">
+                        <span>Day</span>
+                        <span>Status</span>
+                        <span>Time Slots</span>
+                        <span>Action</span>
+                    </div>
+                    <div id="timingDaysContainer" class="timing-days-container"></div>
+                    <small class="field-helper timing-helper">At least one day and one valid time slot are required.</small>
+                </section>
+            </div>
+
+            <div class="add-restaurant-actions">
+                <label class="verify-checkbox">
+                    <input type="checkbox" id="detailsVerified">
+                    <span>I have verified the restaurant details and map location.</span>
+                </label>
+
+                <button id="createRestaurantBtn" type="submit" class="create-restaurant-btn">
+                    🚀 CREATE RESTAURANT
+                </button>
+                <small>Restaurant will be created as Approved and Offline.</small>
+            </div>
+        </form>
+    </main>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGxua4ApZbRdYP1wA6e8b4AwvqdKxrZVc&libraries=places"></script>
+
+    <div id="loadingOverlay" class="loading-overlay" aria-hidden="true">
+        <div class="spinner"></div>
+        <div id="loadingText">Creating Restaurant...</div>
+    </div>
+
+    <div id="successModal" class="success-modal" aria-hidden="true">
+        <div class="success-content">
+            <div class="success-icon">✓</div>
+            <h2>Restaurant Created Successfully</h2>
+            <p id="successRestaurantName"></p>
+            <div id="successSummary" class="success-summary"></div>
+            <div class="success-buttons">
+                <button type="button" id="copyLoginDetailsBtn" class="secondary-green-btn">Copy Login Details</button>
+                <button type="button" id="goToRestaurantsBtn" class="create-restaurant-btn">Go To Restaurants</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="add-restaurant.js"></script>
 </body>
+
 </html>

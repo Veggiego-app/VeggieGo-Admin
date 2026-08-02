@@ -1,286 +1,108 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-
-    <title>
-        VeggieGo Riders
-    </title>
-
-    <link
-rel="stylesheet"
-href="style.css"
-/>
-<link
-rel="stylesheet"
-href="riders.css"
-/>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeggieGo Rider Management</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="riders.css">
 </head>
 
 <body>
-
-<script type="module">
-import { auth } from "./firebase.js"
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
-
-onAuthStateChanged(
-auth,
-async (user) => {
-
-    if (!user) {
-
-        window.location.href =
-        "login.html"
-
-        return
-
-    }
-
-    const adminEmails = [
-    "support@veggiego.co.in"
-]
-
-    if (
-
-        !adminEmails.includes(
-            user.email
-        )
-
-    ) {
-
-        await auth.signOut()
-
-        alert(
-            "Access Denied"
-        )
-
-        window.location.href =
-        "login.html"
-
-        return
-
-    }
-
-})
-</script>
-
-    <!-- SIDEBAR -->
-
-    <div class="sidebar">
-
-        <div class="sidebar-logo">
-            🥗 VeggieGo
-        </div>
-
-        <div class="menu">
-
-            <a
-                href="index.html"
-                class="menu-item"
-            >
-                📊 Dashboard
-            </a>
-
-            <a
-                href="restaurants.html"
-                class="menu-item"
-            >
-                🍽 Restaurants
-            </a>
-
-            <a
-                href="riders.html"
-                class="menu-item active"
-            >
-                🚚 Riders
-            </a>
-
-            <a
-    href="customers.html"
-    class="menu-item"
->
-    👤 Customers
-</a>
-
-            <a
-                href="analytics.html"
-                class="menu-item"
-            >
-                📊 Analytics
-            </a>
-
-            <a href="cod-settlement.html" class="menu-item">
-            💵 COD Settlement
-            </a>
-
-            <a
-                href="settings.html"
-                class="menu-item"
-            >
-                ⚙ Settings
-            </a>
-
-        </div>
-
+    <aside class="sidebar rider-sidebar">
+        <div class="sidebar-logo">🥗 VeggieGo</div>
+        <nav class="menu">
+            <a href="index.html" class="menu-item">📊 Dashboard</a>
+            <a href="orders.html" class="menu-item">📦 Orders</a>
+            <a href="restaurants.html" class="menu-item">🍽 Restaurants</a>
+            <a href="riders.html" class="menu-item active">🛵 Riders</a>
+            <a href="customers.html" class="menu-item">👤 Customers</a>
+            <a href="analytics.html" class="menu-item">📊 Analytics</a>
+            <a href="cod-settlement.html" class="menu-item">💵 COD Settlement</a>
+            <a href="settings.html" class="menu-item">⚙ Settings</a>
+        </nav>
         <div class="admin-profile">
-
-            <div class="admin-name">
-                VeggieGo Admin
-            </div>
-
-            <div class="admin-role">
-                🟢 Super Admin
-            </div>
-
-            <button
-        class="logout-btn"
-        id="logoutBtn"
-        >
-
-                ⎋ Logout
-
-            </button>
-
+            <div class="admin-name">VeggieGo Admin</div>
+            <div class="admin-role">● Super Admin</div>
+            <button type="button" class="logout-btn" id="logoutBtn">⎋ Logout</button>
         </div>
+    </aside>
 
-    </div>
-
-    <!-- MAIN -->
-
-    <div class="main">
-
-        <!-- TOPBAR -->
-
-        <div class="topbar">
-
-            <div class="title">
-                🚚 Rider Management
+    <main class="main rider-management-page">
+        <header class="rider-page-header">
+            <div>
+                <h1>🛵 Rider Management</h1>
+                <p>Rider approval, availability and live operations</p>
             </div>
-
-            <div class="live-box">
-                🟢 LIVE
+            <div class="rider-header-actions">
+                <span class="live-indicator"><span></span> LIVE</span>
+                <button type="button" class="rider-btn primary" id="trackAllRidersBtn">🗺 Track All Riders</button>
             </div>
+        </header>
 
-        </div>
+        <section class="rider-summary-grid" aria-label="Rider summary">
+            <article class="rider-summary-card"><span class="summary-icon purple">👥</span><div><strong id="totalRiders">0</strong><span>Total Riders</span></div></article>
+            <article class="rider-summary-card"><span class="summary-icon orange">◷</span><div><strong id="pendingRiders">0</strong><span>Pending Approval</span></div></article>
+            <article class="rider-summary-card"><span class="summary-icon green">●</span><div><strong id="availableRiders">0</strong><span>Available Online</span></div></article>
+            <article class="rider-summary-card"><span class="summary-icon orange">🛵</span><div><strong id="busyRiders">0</strong><span>Busy Riders</span></div></article>
+            <article class="rider-summary-card"><span class="summary-icon blue">▣</span><div><strong id="activeDeliveries">0</strong><span>Active Deliveries</span></div></article>
+            <article class="rider-summary-card"><span class="summary-icon red">◉</span><div><strong id="offlineRiders">0</strong><span>Offline Riders</span></div></article>
+        </section>
 
-        <!-- DASHBOARD -->
+        <section class="rider-filter-card">
+            <label class="rider-search"><span>⌕</span><input id="riderSearch" placeholder="Search rider name, mobile or code"></label>
+            <select id="zoneFilter" aria-label="Filter by zone"><option value="ALL">All Zones</option></select>
+            <select id="approvalFilter" aria-label="Filter by approval"><option value="ALL">All Approval Statuses</option><option value="PENDING">Pending</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option><option value="SUSPENDED">Suspended</option></select>
+            <select id="availabilityFilter" aria-label="Filter by availability"><option value="ALL">All Availability</option><option value="AVAILABLE">Available Online</option><option value="BUSY">Busy</option><option value="OFFLINE">Offline</option><option value="NO_LOCATION">No Location</option></select>
+            <button type="button" class="rider-btn" id="clearFiltersBtn">↻ Clear Filters</button>
+        </section>
 
-        <div class="dashboard">
-
-            <div class="dash-card">
-
-                <div
-                    class="card-number"
-                    id="totalRiders"
-                >
-                    0
-                </div>
-
-                <div class="card-title">
-                    Total Riders
-                </div>
-
-            </div>
-
-            <div class="dash-card">
-
-                <div
-                    class="card-number"
-                    id="onlineRiders"
-                >
-                    0
-                </div>
-
-                <div class="card-title">
-                    Online Riders
-                </div>
-
-            </div>
-
-            <div class="dash-card">
-
-                <div
-                    class="card-number"
-                    id="activeDeliveries"
-                >
-                    0
-                </div>
-
-                <div class="card-title">
-                    Active Deliveries
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- TABLE -->
-
-        <div class="table-wrapper">
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                Rider
-                            </th>
-
-                            <th>
-                                Phone
-                            </th>
-
-                            <th>
-                                Zone
-                            </th>
-
-                            <th>
-                                Status
-                            </th>
-
-                            <th>
-                                Online
-                            </th>
-
-                            <th>
-                                Deliveries
-                            </th>
-
-                            <th>
-                                Earnings
-                            </th>
-
-                            <th>
-                                Actions
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="ridersTable">
-
-                    </tbody>
-
+        <section class="rider-table-card">
+            <div class="rider-table-scroll">
+                <table class="rider-table">
+                    <thead><tr><th>Rider</th><th>Mobile / Zone</th><th>Approval</th><th>Availability</th><th>Active Orders</th><th>Deliveries / Earnings</th><th>Last Location</th><th>Actions</th></tr></thead>
+                    <tbody id="ridersTable"><tr><td colspan="8" class="empty-table">Loading riders...</td></tr></tbody>
                 </table>
-
             </div>
+            <div class="rider-table-footer"><span id="riderResultCount">0 riders</span><div class="pagination-note">Live data</div></div>
+        </section>
+    </main>
 
-        </div>
-
+    <div class="track-riders-overlay" id="trackRidersOverlay" aria-hidden="true">
+        <section class="track-riders-shell">
+            <header class="track-header">
+                <div><h2>🗺 Track All Riders</h2><p>Find the nearest available rider for an urgent order</p></div>
+                <button type="button" class="icon-close" id="closeTrackRidersBtn" aria-label="Close">×</button>
+            </header>
+            <div class="track-toolbar">
+                <select id="urgentOrderSelect" aria-label="Select urgent order"><option value="">Select Urgent Order (Optional)</option></select>
+                <select id="trackZoneFilter" aria-label="Track zone"><option value="ALL">All Zones</option></select>
+                <select id="trackStatusFilter" aria-label="Track status"><option value="ALL">All Riders</option><option value="AVAILABLE">Available</option><option value="BUSY">Busy</option><option value="OFFLINE">Offline</option><option value="STALE">Location Stale</option></select>
+                <label class="track-search"><span>⌕</span><input id="trackRiderSearch" placeholder="Search rider"></label>
+            </div>
+            <div class="track-summary" id="trackSummary"></div>
+            <div class="track-layout">
+                <div class="track-map-wrap">
+                    <div id="allRidersMap"></div>
+                    <div class="map-legend"><span><i class="green"></i>Available</span><span><i class="orange"></i>Busy</span><span><i class="red"></i>Offline</span><span><i class="gray"></i>Stale/No status</span><span><i class="purple"></i>Pickup</span></div>
+                </div>
+                <aside class="track-side-panel">
+                    <div id="selectedOrderInfo" class="selected-order-info">Select an urgent order to compare pickup distance.</div>
+                    <div id="trackedRiderDetails" class="tracked-rider-details"><div class="empty-state">Click a rider marker or rider card to see details.</div></div>
+                    <div class="nearby-riders-title"><strong>Nearby Riders</strong><span id="nearbyRiderCount">0</span></div>
+                    <div id="nearbyRidersList" class="nearby-riders-list"></div>
+                </aside>
+            </div>
+        </section>
     </div>
 
-    <script
-type="module"
-src="riders.js">
-</script>
+    <div id="riderToast" class="rider-toast" role="status" aria-live="polite"></div>
+    <div id="riderLoading" class="rider-loading" aria-hidden="true"><div class="rider-spinner"></div><strong id="riderLoadingText">Updating...</strong></div>
 
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="riders.js"></script>
 </body>
 
 </html>

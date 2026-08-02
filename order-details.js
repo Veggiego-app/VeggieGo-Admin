@@ -4852,27 +4852,24 @@ Current rider will continue the delivery until ${selectedRider.name} accepts the
 
             {
 
-                riderId:
+                // Rider is assigned only after accepting the targeted request.
+                pendingRiderId:
                     selectedRider.id,
 
-                riderName:
+                pendingRiderName:
                     selectedRider.name,
 
-                riderPhone:
+                pendingRiderPhone:
+                    selectedRider.phone === "-" ? "" : selectedRider.phone,
 
-                    selectedRider.phone === "-"
+                pendingRiderRequestStatus:
+                    "PENDING",
 
-                        ? ""
-
-                        : selectedRider.phone,
-
-                // Rider accepts tab true hoga
-                riderAssigned:
+                riderChangePending:
                     false,
 
-                // Rider app Pending Orders me request
                 riderRequestStatus:
-                    "PENDING",
+                    "",
 
                 navigationStage:
                     "TO_RESTAURANT",
@@ -4880,24 +4877,8 @@ Current rider will continue the delivery until ${selectedRider.name} accepts the
                 riderRequestSentAt:
                     now,
 
-                assignedAt:
-                    now,
-
-                // Purane pending-change fields clean
-                pendingRiderId:
-                    "",
-
-                pendingRiderName:
-                    "",
-
-                pendingRiderPhone:
-                    "",
-
-                pendingRiderRequestStatus:
-                    "",
-
-                riderChangePending:
-                    false,
+                riderRequestMode:
+                    "ADMIN_TARGETED",
 
                 updatedAt:
                     now,

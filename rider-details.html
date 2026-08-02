@@ -1,360 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-
-    <title>
-        Rider Details
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    />
-<link
-rel="stylesheet"
-href="https://unpkg.com/leaflet/dist/leaflet.css"
-/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Details</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="riders.css">
 </head>
 
 <body>
-
-    <!-- SIDEBAR -->
-
-    <div class="sidebar">
-
-        <div class="sidebar-logo">
-            🥗 VeggieGo
-        </div>
-
-        <div class="menu">
-
-            <div
-class="menu-item"
-onclick="window.location.href='index.html'"
->
-📊 Dashboard
-</div>
-
-<div
-class="menu-item"
-onclick="window.location.href='orders.html'"
->
-Orders
-</div>
-
-<div
-class="menu-item"
-onclick="window.location.href='restaurants.html'"
->
-🍽 Restaurants
-</div>
-
-<div
-class="menu-item active"
-onclick="window.location.href='riders.html'"
->
-🛵 Riders
-</div>
-
-<div
-class="menu-item"
-onclick="window.location.href='customers.html'"
->
-👤 Customers
-</div>
-
-<div
-class="menu-item"
-onclick="window.location.href='analytics.html'"
->
-📊 Analytics
-</div>
-
-<div
-        class="menu-item"
-        onclick="window.location.href='cod-settlement.html'"
-    >
-        💵 COD Settlement
-    </div>
-
-<div
-class="menu-item"
-onclick="window.location.href='settings.html'"
->
-⚙️ Settings
-</div>
-
-        </div>
+    <aside class="sidebar rider-sidebar">
+        <div class="sidebar-logo">🥗 VeggieGo</div>
+        <nav class="menu">
+            <a href="index.html" class="menu-item">📊 Dashboard</a>
+            <a href="orders.html" class="menu-item">📦 Orders</a>
+            <a href="restaurants.html" class="menu-item">🍽 Restaurants</a>
+            <a href="riders.html" class="menu-item active">🛵 Riders</a>
+            <a href="customers.html" class="menu-item">👤 Customers</a>
+            <a href="analytics.html" class="menu-item">📊 Analytics</a>
+            <a href="cod-settlement.html" class="menu-item">💵 COD Settlement</a>
+            <a href="settings.html" class="menu-item">⚙ Settings</a>
+        </nav>
         <div class="admin-profile">
-
-<div class="admin-name">
-VeggieGo Admin
-</div>
-
-<div class="admin-role">
-🟢 Super Admin
-</div>
-
-<button
-class="logout-btn"
-id="logoutBtn"
->
-⎋ Logout
-</button>
-
-</div>
-
-    </div>
-
-    <!-- MAIN -->
-
-    <div class="main">
-
-        <!-- TOPBAR -->
-
-        <div class="topbar">
-
-            <div class="title">
-                🚚 Rider Details
-            </div>
-
-            <div class="live-box">
-                🟢 LIVE
-            </div>
-
+            <div class="admin-name">VeggieGo Admin</div>
+            <div class="admin-role">● Super Admin</div>
+            <button type="button" class="logout-btn" id="logoutBtn">⎋ Logout</button>
         </div>
+    </aside>
 
-        <!-- DETAILS CARD -->
+    <main class="main rider-detail-page">
+        <div id="riderDetailsRoot"><div class="rider-page-loading">Loading rider details...</div></div>
+    </main>
 
-        <div class="details-card">
+    <div id="riderDialogOverlay" class="rider-dialog-overlay" aria-hidden="true"><div id="riderDialog" class="rider-dialog"></div></div>
+    <div id="riderToast" class="rider-toast" role="status" aria-live="polite"></div>
+    <div id="riderLoading" class="rider-loading" aria-hidden="true"><div class="rider-spinner"></div><strong id="riderLoadingText">Updating...</strong></div>
 
-            <div class="profile-grid">
-
-<div class="profile-left">
-
-            <div class="details-top">
-
-                <h2 id="riderName">
-                    Loading...
-                </h2>
-
-                <span
-                    class="status-badge"
-                    id="riderStatus"
-                >
-                    PENDING
-                </span>
-
-            </div>
-
-            <br>
-
-            <p>
-                📞 Phone:
-                <span id="riderPhone">
-                    -
-                </span>
-            </p>
-
-            <br>
-
-            <p>
-
-📍 Zone :
-
-<select
-id="editZone"
-style="
-width:320px;
-height:38px;
-border-radius:8px;
-">
-
-<option value="Gandhidham">
-Gandhidham
-</option>
-
-<option value="Adipur">
-Adipur
-</option>
-
-<option value="Anjar">
-Anjar
-</option>
-
-<option value="Bhuj">
-Bhuj
-</option>
-
-</select>
-
-</p>
-            <br>
-
-<p>
-
-👤 Rider Name :
-
-<input
-id="editName"
-type="text"
-style="width:300px"
-/>
-
-</p>
-
-<br>
-
-<p>
-
-🆔 Rider ID :
-
-<b id="riderCode">
-Generating...
-</b>
-
-</p>
-
-<br>
-
-<p>
-
-🚗 Vehicle Number :
-
-<input
-id="editVehicleNumber"
-type="text"
-style="width:300px"
-/>
-
-</p>
-
-<br>
-
-<p>
-
-🪪 License Number :
-
-<input
-id="editLicenseNumber"
-type="text"
-style="width:300px"
-/>
-
-</p>
-
-            <br>
-
-            <p>
-                🟢 Online:
-                <span id="riderOnline">
-                    -
-                </span>
-            </p>
-
-            <br>
-
-            <p>
-                🚚 Deliveries:
-                <span id="riderDeliveries">
-                    0
-                </span>
-            </p>
-
-            <br>
-
-            <p>
-                💰 Earnings:
-                ₹<span id="riderEarnings">
-                    0
-                </span>
-            </p>
-
-            <br>
-
-            <p>
-                📦 Active Order:
-                <span id="activeOrder">
-                    None
-                </span>
-            </p>
-            </div> <!-- profile-left -->
-
-<div class="profile-right">
-
-<h3 class="section-title">
-🗺 Live Rider Location
-</h3>
-<!-- LIVE MAP -->
-
-<div
-    id="map"
-    style="
-        height: 450px;
-        width: 100%;
-        border-radius: 20px;
-        margin-top: 30px;
-        margin-bottom: 30px;
-    "
->
-</div>
-
-            <!-- ACTIONS -->
-
-            <div class="buttons">
-
-                <button
-                    class="approve-btn"
-                    onclick="approveRider()"
-                >
-                    Approve
-                </button>
-
-                <button
-                    class="reject-btn"
-                    onclick="rejectRider()"
-                >
-                    Reject
-                </button>
-
-                <button
-                    class="view-btn"
-                    onclick="forceOffline()"
-                >
-                    Force Offline
-                </button>
-
-            </div>
-            <br>
-
-<button
-
-class="approve-btn"
-
-onclick="saveProfile()"
-
->
-
-💾 Save Rider Details
-
-</button>
-
-        </div>   <!-- profile-right -->
-
-    </div>       <!-- profile-grid -->
-
-</div>           <!-- details-card -->
-
-<script
-src="https://unpkg.com/leaflet/dist/leaflet.js">
-</script>
-    <script
-        type="module"
-        src="rider-details.js"
-    >
-    </script>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="rider-details.js"></script>
 </body>
 
 </html>
