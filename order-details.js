@@ -13,7 +13,8 @@ import {
     getDocs,
     collection,
     writeBatch,
-    arrayUnion
+    arrayUnion,
+    arrayRemove
 
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
@@ -4810,6 +4811,9 @@ ${
                     pendingRiderRequestStatus:
                         "PENDING",
 
+                     rejectedRiderIds:
+                        arrayRemove(selectedRider.id),
+
                     riderChangePending:
                         true,
 
@@ -4867,6 +4871,8 @@ Current rider will continue the delivery until ${selectedRider.name} accepts the
 
                 riderChangePending:
                     false,
+
+                rejectedRiderIds: arrayRemove(selectedRider.id),
 
                 riderRequestStatus:
                     "",
